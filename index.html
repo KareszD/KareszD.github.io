@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Steam Profile Tracker</title>
+    <title>CS2 Game Ban Tracker</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
@@ -262,7 +262,7 @@
         }
         .profile-item {
             display: grid;
-            grid-template-columns: 1fr auto auto auto auto;
+            grid-template-columns: 1fr auto auto auto;
             gap: 15px;
             align-items: center;
             padding: 12px;
@@ -291,11 +291,6 @@
             color: #ffffff;
             font-weight: bold;
             font-size: 14px;
-        }
-        .profile-hours {
-            color: #a3cf06;
-            font-size: 12px;
-            white-space: nowrap;
         }
         .profile-date {
             color: #7a8b9a;
@@ -402,28 +397,10 @@
         
         <!-- Add Profile Section -->
         <div class="input-section">
-            <h2>➕ Add Profile</h2>
+            <h2>➕ Add Game Ban</h2>
             <div class="input-group">
                 <input type="text" id="profileInput" placeholder="Enter Steam profile link (e.g., https://steamcommunity.com/id/username)" />
-            </div>
-            <div class="input-row">
-                <div class="input-field">
-                    <label>Display Name (optional)</label>
-                    <input type="text" id="profileName" placeholder="Player name" />
-                </div>
-                <div class="input-field">
-                    <label>CS2 Hours (optional)</label>
-                    <input type="number" id="profileHours" placeholder="Hours" min="0" />
-                </div>
-                <div class="input-field">
-                    <label>Ban Type</label>
-                    <select id="banType">
-                        <option value="VAC">VAC Ban</option>
-                        <option value="Game">Game Ban</option>
-                        <option value="Trade">Trade Ban</option>
-                    </select>
-                </div>
-                <button id="addButton">Add Profile Instantly</button>
+                <button id="addButton">Add Ban</button>
             </div>
             <p class="message error-message" id="errorMessage"></p>
             <p class="message success-message" id="successMessage"></p>
@@ -461,7 +438,7 @@
             
             <!-- Filters -->
             <div class="filter-section">
-                <h4 style="margin: 0 0 15px 0; color: #c7d5e0;">🔍 Filters</h4>
+                <h4 style="margin: 0 0 15px 0; color: #c7d5e0;">🔍 Filters & Chart Settings</h4>
                 <div class="filter-row">
                     <div class="filter-group">
                         <label>Start Date</label>
@@ -472,29 +449,6 @@
                         <input type="date" id="filterEndDate" />
                     </div>
                     <div class="filter-group">
-                        <label>Search by Name</label>
-                        <input type="text" id="filterName" placeholder="Enter name..." style="width: 200px;" />
-                    </div>
-                    <div class="filter-group">
-                        <label>Ban Type</label>
-                        <select id="filterBanType">
-                            <option value="">All Types</option>
-                            <option value="VAC">VAC Ban</option>
-                            <option value="Game">Game Ban</option>
-                            <option value="Trade">Trade Ban</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="filter-row">
-                    <div class="filter-group">
-                        <label>Min CS2 Hours</label>
-                        <input type="number" id="filterMinHours" placeholder="0" min="0" />
-                    </div>
-                    <div class="filter-group">
-                        <label>Max CS2 Hours</label>
-                        <input type="number" id="filterMaxHours" placeholder="∞" min="0" />
-                    </div>
-                    <div class="filter-group">
                         <label>Quick Filter</label>
                         <select id="quickFilter">
                             <option value="">Custom</option>
@@ -503,6 +457,14 @@
                             <option value="month">This Month</option>
                             <option value="year">This Year</option>
                             <option value="all">All Time</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Chart Interval</label>
+                        <select id="chartInterval">
+                            <option value="day">Daily</option>
+                            <option value="week">Weekly</option>
+                            <option value="month">Monthly</option>
                         </select>
                     </div>
                     <button id="applyFilters">Apply Filters</button>
@@ -517,44 +479,16 @@
                     <div class="value" id="filteredCount">0</div>
                 </div>
                 <div class="summary-item">
-                    <div class="label">Avg CS2 Hours</div>
-                    <div class="value" id="avgHours">0</div>
-                </div>
-                <div class="summary-item">
-                    <div class="label">Total CS2 Hours</div>
-                    <div class="value" id="totalHours">0</div>
-                </div>
-                <div class="summary-item">
-                    <div class="label">VAC Bans</div>
-                    <div class="value" id="vacCount">0</div>
-                </div>
-                <div class="summary-item">
                     <div class="label">Game Bans</div>
                     <div class="value" id="gameCount">0</div>
-                </div>
-                <div class="summary-item">
-                    <div class="label">Trade Bans</div>
-                    <div class="value" id="tradeCount">0</div>
                 </div>
             </div>
 
             <!-- Charts -->
             <div class="charts-container">
-                <div class="chart-box">
+                <div class="chart-box" style="grid-column: 1 / -1;">
                     <h4>📅 Bans Over Time</h4>
                     <canvas id="timelineChart"></canvas>
-                </div>
-                <div class="chart-box">
-                    <h4>🎯 Ban Types Distribution</h4>
-                    <canvas id="banTypeChart"></canvas>
-                </div>
-                <div class="chart-box">
-                    <h4>⏰ Hours Played Distribution</h4>
-                    <canvas id="hoursChart"></canvas>
-                </div>
-                <div class="chart-box">
-                    <h4>📈 Cumulative Bans</h4>
-                    <canvas id="cumulativeChart"></canvas>
                 </div>
             </div>
         </div>
@@ -562,7 +496,7 @@
         <!-- Profiles List -->
         <div class="profiles-section">
             <div class="profiles-header">
-                <h2>🚫 Banned Profiles</h2>
+                <h2>🚫 Game Banned Profiles</h2>
                 <div class="sort-controls">
                     <label>Sort by:</label>
                     <select id="sortBy">
@@ -570,8 +504,6 @@
                         <option value="date-asc">Date (Oldest)</option>
                         <option value="name-asc">Name (A-Z)</option>
                         <option value="name-desc">Name (Z-A)</option>
-                        <option value="hours-desc">Hours (High-Low)</option>
-                        <option value="hours-asc">Hours (Low-High)</option>
                     </select>
                 </div>
             </div>
@@ -609,21 +541,18 @@
                 {
                     url: "https://steamcommunity.com/id/cheater_caught_today1",
                     name: "AimBot_Andy",
-                    hours: 1250,
-                    banType: "VAC",
+                    banType: "Game",
                     timestamp: now - (2 * hour)
                 },
                 {
                     url: "https://steamcommunity.com/profiles/76561198999000001",
                     name: "WallHacker_Pro",
-                    hours: 890,
-                    banType: "VAC",
+                    banType: "Game",
                     timestamp: now - (5 * hour)
                 },
                 {
                     url: "https://steamcommunity.com/id/spinbot_master",
                     name: "SpinBot_Steve",
-                    hours: 2100,
                     banType: "Game",
                     timestamp: now - (8 * hour)
                 },
@@ -631,86 +560,74 @@
                 {
                     url: "https://steamcommunity.com/id/rage_hacker_2024",
                     name: "RageQuit_Ron",
-                    hours: 450,
-                    banType: "VAC",
+                    banType: "Game",
                     timestamp: now - (1 * day + 3 * hour)
                 },
                 {
                     url: "https://steamcommunity.com/profiles/76561198999000002",
                     name: "TriggerBot_Tim",
-                    hours: 3200,
-                    banType: "VAC",
+                    banType: "Game",
                     timestamp: now - (2 * day + 6 * hour)
                 },
                 {
                     url: "https://steamcommunity.com/id/boosting_service",
                     name: "BoostKing_Bob",
-                    hours: 150,
-                    banType: "Trade",
+                    banType: "Game",
                     timestamp: now - (2 * day + 12 * hour)
                 },
                 {
                     url: "https://steamcommunity.com/id/legit_cheater_lol",
                     name: "NotCheating_Nick",
-                    hours: 5500,
-                    banType: "VAC",
+                    banType: "Game",
                     timestamp: now - (3 * day + 2 * hour)
                 },
                 {
                     url: "https://steamcommunity.com/profiles/76561198999000003",
                     name: "HVH_Hero",
-                    hours: 780,
                     banType: "Game",
                     timestamp: now - (4 * day + 8 * hour)
                 },
                 {
                     url: "https://steamcommunity.com/id/silent_aim_user",
                     name: "SilentAim_Sam",
-                    hours: 1800,
-                    banType: "VAC",
+                    banType: "Game",
                     timestamp: now - (5 * day + 4 * hour)
                 },
                 {
                     url: "https://steamcommunity.com/id/skin_scammer_99",
                     name: "ScammerKing",
-                    hours: 320,
-                    banType: "Trade",
+                    banType: "Game",
                     timestamp: now - (6 * day + 10 * hour)
                 },
                 // Older profiles for variety
                 {
                     url: "https://steamcommunity.com/id/old_cheater_1",
                     name: "VeteranHacker",
-                    hours: 4200,
-                    banType: "VAC",
+                    banType: "Game",
                     timestamp: now - (10 * day)
                 },
                 {
                     url: "https://steamcommunity.com/profiles/76561198999000004",
                     name: "GlobalBanned",
-                    hours: 2800,
                     banType: "Game",
                     timestamp: now - (15 * day)
                 },
                 {
                     url: "https://steamcommunity.com/id/casual_cheater",
                     name: "CasualCheats",
-                    hours: 600,
-                    banType: "VAC",
+                    banType: "Game",
                     timestamp: now - (20 * day)
                 },
                 {
                     url: "https://steamcommunity.com/id/trade_banned_user",
                     name: "TradeBanTom",
-                    hours: 1100,
-                    banType: "Trade",
+                    banType: "Game",
                     timestamp: now - (25 * day)
                 },
                 {
                     url: "https://steamcommunity.com/profiles/76561198999000005",
                     name: "OGCheater",
-                    hours: 8500,
-                    banType: "VAC",
+                    banType: "Game",
                     timestamp: now - (30 * day)
                 }
             ];
@@ -791,8 +708,7 @@
             allProfiles = allProfiles.map(p => ({
                 url: p.url,
                 name: p.name || extractNameFromUrl(p.url),
-                hours: p.hours || 0,
-                banType: p.banType || 'VAC',
+                banType: 'Game',
                 timestamp: p.timestamp || Date.now()
             }));
             
@@ -865,10 +781,6 @@
         function applyFilters() {
             const startDate = document.getElementById('filterStartDate').value;
             const endDate = document.getElementById('filterEndDate').value;
-            const nameFilter = document.getElementById('filterName').value.toLowerCase();
-            const banTypeFilter = document.getElementById('filterBanType').value;
-            const minHours = parseInt(document.getElementById('filterMinHours').value) || 0;
-            const maxHours = parseInt(document.getElementById('filterMaxHours').value) || Infinity;
             
             filteredProfiles = allProfiles.filter(profile => {
                 // Date filter
@@ -879,21 +791,6 @@
                 if (endDate) {
                     const end = new Date(endDate).getTime() + 86400000; // End of day
                     if (profile.timestamp > end) return false;
-                }
-                
-                // Name filter
-                if (nameFilter && !profile.name.toLowerCase().includes(nameFilter)) {
-                    return false;
-                }
-                
-                // Ban type filter
-                if (banTypeFilter && profile.banType !== banTypeFilter) {
-                    return false;
-                }
-                
-                // Hours filter
-                if (profile.hours < minHours || profile.hours > maxHours) {
-                    return false;
                 }
                 
                 return true;
@@ -908,11 +805,8 @@
         function resetFilters() {
             document.getElementById('filterStartDate').value = '';
             document.getElementById('filterEndDate').value = '';
-            document.getElementById('filterName').value = '';
-            document.getElementById('filterBanType').value = '';
-            document.getElementById('filterMinHours').value = '';
-            document.getElementById('filterMaxHours').value = '';
             document.getElementById('quickFilter').value = '';
+            document.getElementById('chartInterval').value = 'day';
             
             // Remove active state from stat cards
             document.querySelectorAll('.stat-card').forEach(card => card.classList.remove('active'));
@@ -961,19 +855,10 @@
         // Update stats summary
         function updateStatsSummary() {
             const count = filteredProfiles.length;
-            const totalHours = filteredProfiles.reduce((sum, p) => sum + (p.hours || 0), 0);
-            const avgHours = count > 0 ? Math.round(totalHours / count) : 0;
-            
-            const vacCount = filteredProfiles.filter(p => p.banType === 'VAC').length;
             const gameCount = filteredProfiles.filter(p => p.banType === 'Game').length;
-            const tradeCount = filteredProfiles.filter(p => p.banType === 'Trade').length;
             
             document.getElementById('filteredCount').textContent = count;
-            document.getElementById('avgHours').textContent = avgHours.toLocaleString();
-            document.getElementById('totalHours').textContent = totalHours.toLocaleString();
-            document.getElementById('vacCount').textContent = vacCount;
             document.getElementById('gameCount').textContent = gameCount;
-            document.getElementById('tradeCount').textContent = tradeCount;
         }
         
         // Escape HTML to prevent XSS
@@ -1003,26 +888,18 @@
                 case 'name-desc':
                     sorted.sort((a, b) => b.name.localeCompare(a.name));
                     break;
-                case 'hours-desc':
-                    sorted.sort((a, b) => (b.hours || 0) - (a.hours || 0));
-                    break;
-                case 'hours-asc':
-                    sorted.sort((a, b) => (a.hours || 0) - (b.hours || 0));
-                    break;
             }
             
-            document.getElementById('resultsCount').textContent = `Showing ${sorted.length} of ${allProfiles.length} profiles`;
+            document.getElementById('resultsCount').textContent = `Showing ${sorted.length} of ${allProfiles.length} bans`;
             
             if (sorted.length === 0) {
-                profileList.innerHTML = '<li class="empty-message">No profiles match your filters.</li>';
+                profileList.innerHTML = '<li class="empty-message">No bans match your filters.</li>';
                 return;
             }
             
             profileList.innerHTML = sorted.map((profile, index) => {
                 const date = new Date(profile.timestamp);
                 const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const badgeClass = profile.banType === 'VAC' ? 'badge-vac' : 
-                                   profile.banType === 'Game' ? 'badge-game' : 'badge-trade';
                 
                 return `
                     <li class="profile-item">
@@ -1031,10 +908,9 @@
                             <br>
                             <a href="${escapeHtml(profile.url)}" target="_blank" rel="noopener noreferrer" class="profile-link">${escapeHtml(profile.url)}</a>
                         </div>
-                        <span class="badge ${badgeClass}">${escapeHtml(profile.banType)}</span>
-                        <span class="profile-hours">🎮 ${profile.hours.toLocaleString()} hrs</span>
+                        <span class="badge badge-game">Game Ban</span>
                         <span class="profile-date">📅 ${escapeHtml(dateStr)}</span>
-                        <button class="profile-delete" data-url="${escapeHtml(profile.url)}" title="Delete">🗑️</button>
+                        <button class="profile-delete" data-url="${escapeHtml(profile.url)}" data-timestamp="${profile.timestamp}" title="Delete">🗑️</button>
                     </li>
                 `;
             }).join('');
@@ -1047,10 +923,12 @@
         function handleDeleteClick(event) {
             if (event.target.classList.contains('profile-delete')) {
                 const url = event.target.dataset.url;
-                if (url && confirm('Are you sure you want to delete this profile?')) {
-                    allProfiles = allProfiles.filter(p => p.url !== url);
+                const timestamp = parseInt(event.target.dataset.timestamp);
+                if (url && confirm('Are you sure you want to delete this ban entry?')) {
+                    // Remove by both url and timestamp to handle duplicate URLs
+                    allProfiles = allProfiles.filter(p => !(p.url === url && p.timestamp === timestamp));
                     saveToStorage(allProfiles);
-                    filteredProfiles = filteredProfiles.filter(p => p.url !== url);
+                    filteredProfiles = filteredProfiles.filter(p => !(p.url === url && p.timestamp === timestamp));
                     updateUI();
                 }
             }
@@ -1075,24 +953,57 @@
                 return;
             }
             updateTimelineChart();
-            updateBanTypeChart();
-            updateHoursChart();
-            updateCumulativeChart();
         }
         
-        // Timeline chart
+        // Get week number helper
+        function getWeekNumber(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+        
+        // Timeline chart with configurable interval
         function updateTimelineChart() {
             const ctx = document.getElementById('timelineChart').getContext('2d');
+            const interval = document.getElementById('chartInterval').value;
             
-            // Group by date
-            const dateGroups = {};
+            // Group by interval
+            const groups = {};
             filteredProfiles.forEach(p => {
-                const date = new Date(p.timestamp).toLocaleDateString();
-                dateGroups[date] = (dateGroups[date] || 0) + 1;
+                const date = new Date(p.timestamp);
+                let key;
+                
+                switch (interval) {
+                    case 'week':
+                        const weekNum = getWeekNumber(date);
+                        key = `${date.getFullYear()}-W${weekNum.toString().padStart(2, '0')}`;
+                        break;
+                    case 'month':
+                        key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+                        break;
+                    case 'day':
+                    default:
+                        key = date.toLocaleDateString();
+                        break;
+                }
+                
+                groups[key] = (groups[key] || 0) + 1;
             });
             
-            const sortedDates = Object.keys(dateGroups).sort((a, b) => new Date(a) - new Date(b));
-            const last14Days = sortedDates.slice(-14);
+            // Sort and limit data
+            let sortedKeys;
+            if (interval === 'day') {
+                sortedKeys = Object.keys(groups).sort((a, b) => new Date(a) - new Date(b));
+            } else {
+                sortedKeys = Object.keys(groups).sort();
+            }
+            
+            // Limit to last N entries based on interval
+            const limits = { day: 30, week: 12, month: 12 };
+            const limit = limits[interval] || 30;
+            const displayKeys = sortedKeys.slice(-limit);
             
             if (charts.timeline) {
                 charts.timeline.destroy();
@@ -1101,11 +1012,11 @@
             charts.timeline = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: last14Days,
+                    labels: displayKeys,
                     datasets: [{
-                        label: 'Bans',
-                        data: last14Days.map(d => dateGroups[d]),
-                        backgroundColor: '#66c0f4',
+                        label: 'Game Bans',
+                        data: displayKeys.map(d => groups[d]),
+                        backgroundColor: '#ffa500',
                         borderRadius: 4
                     }]
                 },
@@ -1118,155 +1029,10 @@
                     scales: {
                         y: {
                             beginAtZero: true,
-                            ticks: { color: '#7a8b9a' },
-                            grid: { color: '#2a475e' }
-                        },
-                        x: {
-                            ticks: { color: '#7a8b9a', maxRotation: 45 },
-                            grid: { display: false }
-                        }
-                    }
-                }
-            });
-        }
-        
-        // Ban type pie chart
-        function updateBanTypeChart() {
-            const ctx = document.getElementById('banTypeChart').getContext('2d');
-            
-            const vacCount = filteredProfiles.filter(p => p.banType === 'VAC').length;
-            const gameCount = filteredProfiles.filter(p => p.banType === 'Game').length;
-            const tradeCount = filteredProfiles.filter(p => p.banType === 'Trade').length;
-            
-            if (charts.banType) {
-                charts.banType.destroy();
-            }
-            
-            charts.banType = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['VAC Ban', 'Game Ban', 'Trade Ban'],
-                    datasets: [{
-                        data: [vacCount, gameCount, tradeCount],
-                        backgroundColor: ['#ff6b6b', '#ffa500', '#9370db'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { color: '#c7d5e0' }
-                        }
-                    }
-                }
-            });
-        }
-        
-        // Hours distribution chart
-        function updateHoursChart() {
-            const ctx = document.getElementById('hoursChart').getContext('2d');
-            
-            const ranges = [
-                { label: '0-100', min: 0, max: 100 },
-                { label: '100-500', min: 100, max: 500 },
-                { label: '500-1000', min: 500, max: 1000 },
-                { label: '1000-2000', min: 1000, max: 2000 },
-                { label: '2000-5000', min: 2000, max: 5000 },
-                { label: '5000+', min: 5000, max: Infinity }
-            ];
-            
-            const counts = ranges.map(r => 
-                filteredProfiles.filter(p => p.hours >= r.min && p.hours < r.max).length
-            );
-            
-            if (charts.hours) {
-                charts.hours.destroy();
-            }
-            
-            charts.hours = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ranges.map(r => r.label + ' hrs'),
-                    datasets: [{
-                        label: 'Players',
-                        data: counts,
-                        backgroundColor: '#a3cf06',
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { color: '#7a8b9a' },
-                            grid: { color: '#2a475e' }
-                        },
-                        x: {
-                            ticks: { color: '#7a8b9a' },
-                            grid: { display: false }
-                        }
-                    }
-                }
-            });
-        }
-        
-        // Cumulative chart
-        function updateCumulativeChart() {
-            const ctx = document.getElementById('cumulativeChart').getContext('2d');
-            
-            const sorted = [...filteredProfiles].sort((a, b) => a.timestamp - b.timestamp);
-            
-            const cumulativeData = [];
-            let cumulative = 0;
-            
-            // Use Map for O(n) complexity instead of O(n²)
-            const dateMap = new Map();
-            sorted.forEach(p => {
-                cumulative++;
-                const date = new Date(p.timestamp).toLocaleDateString();
-                dateMap.set(date, cumulative);
-            });
-            
-            // Convert Map to array maintaining order
-            for (const [date, count] of dateMap) {
-                cumulativeData.push({ date, count });
-            }
-            
-            if (charts.cumulative) {
-                charts.cumulative.destroy();
-            }
-            
-            charts.cumulative = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: cumulativeData.map(d => d.date),
-                    datasets: [{
-                        label: 'Total Bans',
-                        data: cumulativeData.map(d => d.count),
-                        borderColor: '#66c0f4',
-                        backgroundColor: 'rgba(102, 192, 244, 0.1)',
-                        fill: true,
-                        tension: 0.3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { color: '#7a8b9a' },
+                            ticks: { 
+                                color: '#7a8b9a',
+                                stepSize: 1
+                            },
                             grid: { color: '#2a475e' }
                         },
                         x: {
@@ -1296,17 +1062,11 @@
         // Add new profile
         function addProfile() {
             const urlInput = document.getElementById('profileInput');
-            const nameInput = document.getElementById('profileName');
-            const hoursInput = document.getElementById('profileHours');
-            const banTypeSelect = document.getElementById('banType');
             const errorMessage = document.getElementById('errorMessage');
             const successMessage = document.getElementById('successMessage');
             
             const url = urlInput.value.trim();
-            const name = nameInput.value.trim() || extractNameFromUrl(url);
-            const hoursValue = parseInt(hoursInput.value, 10);
-            const hours = Number.isNaN(hoursValue) || hoursValue < 0 ? 0 : hoursValue;
-            const banType = banTypeSelect.value;
+            const name = extractNameFromUrl(url);
             
             // Clear messages
             errorMessage.style.display = 'none';
@@ -1324,9 +1084,17 @@
                 return;
             }
             
-            // Check for duplicates
-            if (allProfiles.some(p => p.url.toLowerCase() === url.toLowerCase())) {
-                errorMessage.textContent = 'This profile has already been added.';
+            // Check for duplicates within 30 minutes (1800000 ms)
+            const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
+            const recentDuplicate = allProfiles.find(p => 
+                p.url.toLowerCase() === url.toLowerCase() && 
+                p.timestamp > thirtyMinutesAgo
+            );
+            
+            if (recentDuplicate) {
+                const timeSinceLastAdd = Math.ceil((Date.now() - recentDuplicate.timestamp) / 60000);
+                const waitTime = 30 - timeSinceLastAdd;
+                errorMessage.textContent = `This profile was added ${timeSinceLastAdd} minute(s) ago. Please wait ${waitTime} more minute(s) before adding again.`;
                 errorMessage.style.display = 'block';
                 return;
             }
@@ -1335,21 +1103,18 @@
             const newProfile = {
                 url: url,
                 name: name,
-                hours: hours,
-                banType: banType,
+                banType: 'Game',
                 timestamp: Date.now()
             };
             
             allProfiles.unshift(newProfile);
             saveToStorage(allProfiles);
             
-            // Clear inputs
+            // Clear input
             urlInput.value = '';
-            nameInput.value = '';
-            hoursInput.value = '';
             
             // Show success
-            successMessage.textContent = `Profile "${name}" added successfully!`;
+            successMessage.textContent = `Game ban for "${name}" added successfully!`;
             successMessage.style.display = 'block';
             
             // Update UI
@@ -1373,23 +1138,22 @@
         
         // Export to CSV
         function exportCSV() {
-            const headers = ['Name', 'URL', 'Hours', 'Ban Type', 'Date'];
+            const headers = ['Name', 'URL', 'Ban Type', 'Date'];
             const rows = filteredProfiles.map(p => [
                 p.name,
                 p.url,
-                p.hours,
                 p.banType,
                 new Date(p.timestamp).toISOString()
             ]);
             
             const csv = [headers, ...rows].map(row => row.map(cell => escapeCsvCell(cell)).join(',')).join('\n');
-            downloadFile(csv, 'cs2_bans.csv', 'text/csv');
+            downloadFile(csv, 'cs2_game_bans.csv', 'text/csv');
         }
         
         // Export to JSON
         function exportJSON() {
             const json = JSON.stringify({ profiles: filteredProfiles }, null, 2);
-            downloadFile(json, 'cs2_bans.json', 'application/json');
+            downloadFile(json, 'cs2_game_bans.json', 'application/json');
         }
         
         // Download file helper
@@ -1417,6 +1181,8 @@
                 applyQuickFilter(e.target.value);
             }
         });
+        
+        document.getElementById('chartInterval').addEventListener('change', updateCharts);
         
         document.getElementById('sortBy').addEventListener('change', updateProfileList);
         
