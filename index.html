@@ -209,7 +209,7 @@
             background-color: #1b2838;
             padding: 15px;
             border-radius: 8px;
-            min-height: 250px;
+            min-height: 150px;
         }
         .chart-box h4 {
             margin: 0 0 15px 0;
@@ -257,7 +257,7 @@
             list-style: none;
             padding: 0;
             margin: 0;
-            max-height: 500px;
+            max-height: 400px;
             overflow-y: auto;
         }
         .profile-item {
@@ -477,10 +477,6 @@
                 <div class="summary-item">
                     <div class="label">Filtered Results</div>
                     <div class="value" id="filteredCount">0</div>
-                </div>
-                <div class="summary-item">
-                    <div class="label">Game Bans</div>
-                    <div class="value" id="gameCount">0</div>
                 </div>
             </div>
 
@@ -859,10 +855,8 @@
         // Update stats summary
         function updateStatsSummary() {
             const count = filteredProfiles.length;
-            const gameCount = filteredProfiles.filter(p => p.banType === 'Game').length;
             
             document.getElementById('filteredCount').textContent = count;
-            document.getElementById('gameCount').textContent = gameCount;
         }
         
         // Escape HTML to prevent XSS
