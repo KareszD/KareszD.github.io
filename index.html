@@ -560,13 +560,13 @@
         // 4. Set database rules to allow read/write (for testing)
         // 5. Copy your config object here
         const FIREBASE_CONFIG = {
-            apiKey: "AIzaSyDemo-REPLACE-WITH-YOUR-KEY",
-            authDomain: "your-project.firebaseapp.com",
-            databaseURL: "https://your-project-default-rtdb.firebaseio.com",
-            projectId: "your-project",
-            storageBucket: "your-project.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef123456"
+            apiKey: "your-api-key-here",
+            authDomain: "your-project-id.firebaseapp.com",
+            databaseURL: "https://your-project-id-default-rtdb.firebaseio.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project-id.appspot.com",
+            messagingSenderId: "000000000000",
+            appId: "0:000000000000:web:000000000000"
         };
         
         // Steam URL validation patterns
@@ -585,6 +585,7 @@
         let charts = {};
         let firebaseDb = null;
         let firebaseInitialized = false;
+        let isSyncingToFirebase = false; // Flag to prevent recursive syncing
         
         // Generate sample profiles for this week and today
         function generateSampleProfiles() {
@@ -721,8 +722,8 @@
                 }
                 
                 // Check if config has placeholder values
-                if (FIREBASE_CONFIG.apiKey.includes('REPLACE') || 
-                    FIREBASE_CONFIG.databaseURL.includes('your-project')) {
+                if (FIREBASE_CONFIG.apiKey === 'your-api-key-here' || 
+                    FIREBASE_CONFIG.databaseURL.includes('your-project-id')) {
                     console.info('Firebase not configured. Using local storage only. To enable real-time sync across all users, configure Firebase in the FIREBASE_CONFIG object.');
                     return false;
                 }
@@ -762,26 +763,18 @@
             
             const profilesRef = firebaseDb.ref('profiles');
             
-            // Listen for all changes to the profiles
-            profilesRef.on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    // Convert object to array and handle Firebase data structure
-                    const firebaseProfiles = Object.keys(data).map(key => ({
-                        firebaseKey: key,
-                        ...data[key]
-                    }));
-                    
-                    // Only update if there are actual changes
-                    const currentUrls = new Set(allProfiles.map(p => p.url.toLowerCase()));
-                    const firebaseUrls = new Set(firebaseProfiles.map(p => p.url.toLowerCase()));
-                    
-                    // Check if there's a difference
-                    const hasChanges = firebaseProfiles.length !== allProfiles.length ||
-                        ![...currentUrls].every(url => firebaseUrls.has(url));
-                    
-                    if (hasChanges) {
-                        console.log('Real-time update received from Firebase');
+            // First, do an initial fetch to get existing Firebase data
+            // This prevents the race condition where local data overwrites Firebase data
+            return new Promise((resolve) => {
+                profilesRef.once('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        // Firebase has data - use it as the source of truth
+                        const firebaseProfiles = Object.keys(data).map(key => ({
+                            firebaseKey: key,
+                            ...data[key]
+                        }));
+                        
                         allProfiles = firebaseProfiles.map(p => ({
                             url: p.url,
                             name: p.name || extractNameFromUrl(p.url),
@@ -791,36 +784,101 @@
                         }));
                         saveToStorage(allProfiles);
                         updateUI();
+                        console.log('Loaded ' + allProfiles.length + ' profiles from Firebase');
+                    } else {
+                        // No data in Firebase, upload current local data
+                        if (allProfiles.length > 0) {
+                            syncLocalToFirebase();
+                        }
                     }
-                } else {
-                    // No data in Firebase, upload current local data
-                    if (allProfiles.length > 0) {
-                        syncLocalToFirebase();
-                    }
-                }
-            }, (error) => {
-                console.error('Firebase real-time listener error:', error);
+                    
+                    // Now set up the continuous real-time listener for future updates
+                    profilesRef.on('value', (snapshot) => {
+                        const data = snapshot.val();
+                        if (data) {
+                            // Convert object to array and handle Firebase data structure
+                            const firebaseProfiles = Object.keys(data).map(key => ({
+                                firebaseKey: key,
+                                ...data[key]
+                            }));
+                            
+                            // Only update if there are actual changes (avoid unnecessary re-renders)
+                            const hasChanges = firebaseProfiles.length !== allProfiles.length ||
+                                JSON.stringify(firebaseProfiles.map(p => p.url + p.timestamp).sort()) !== 
+                                JSON.stringify(allProfiles.map(p => p.url + p.timestamp).sort());
+                            
+                            if (hasChanges) {
+                                console.log('Real-time update received from Firebase');
+                                allProfiles = firebaseProfiles.map(p => ({
+                                    url: p.url,
+                                    name: p.name || extractNameFromUrl(p.url),
+                                    banType: p.banType || 'Game',
+                                    timestamp: p.timestamp || Date.now(),
+                                    firebaseKey: p.firebaseKey
+                                }));
+                                saveToStorage(allProfiles);
+                                updateUI();
+                            }
+                        }
+                    }, (error) => {
+                        console.error('Firebase real-time listener error:', error);
+                    });
+                    
+                    resolve();
+                }, (error) => {
+                    console.error('Firebase initial fetch error:', error);
+                    resolve(); // Resolve anyway to continue with local data
+                });
             });
         }
         
         // Sync local profiles to Firebase
-        function syncLocalToFirebase() {
-            if (!firebaseInitialized || !firebaseDb) {
+        async function syncLocalToFirebase() {
+            if (!firebaseInitialized || !firebaseDb || isSyncingToFirebase) {
                 return;
             }
             
-            const profilesRef = firebaseDb.ref('profiles');
-            allProfiles.forEach(profile => {
-                if (!profile.firebaseKey) {
+            isSyncingToFirebase = true; // Prevent recursive calls from real-time listener
+            
+            try {
+                const profilesRef = firebaseDb.ref('profiles');
+                const profilesToSync = allProfiles.filter(p => !p.firebaseKey);
+                
+                if (profilesToSync.length === 0) {
+                    return;
+                }
+                
+                // Use Promise.all for proper async handling
+                // Store results separately to avoid mutating during async operations
+                const syncPromises = profilesToSync.map((profile, index) => {
                     const newRef = profilesRef.push();
-                    newRef.set({
+                    return newRef.set({
                         url: profile.url,
                         name: profile.name,
                         banType: profile.banType,
                         timestamp: profile.timestamp
+                    }).then(() => {
+                        return { index, key: newRef.key };
+                    }).catch(err => {
+                        console.error('Error syncing profile to Firebase:', err);
+                        return { index, key: null };
                     });
-                }
-            });
+                });
+                
+                const results = await Promise.all(syncPromises);
+                
+                // Assign Firebase keys after all promises resolve
+                results.forEach(result => {
+                    if (result.key) {
+                        profilesToSync[result.index].firebaseKey = result.key;
+                    }
+                });
+                
+                // Save updated profiles with Firebase keys
+                saveToStorage(allProfiles);
+            } finally {
+                isSyncingToFirebase = false;
+            }
         }
         
         // Add profile to Firebase
@@ -1143,18 +1201,28 @@
                     // Find the profile to get Firebase key
                     const profileToRemove = allProfiles.find(p => p.url === url && p.timestamp === timestamp);
                     
-                    // Remove from Firebase (real-time sync will update other users)
-                    if (profileToRemove) {
-                        removeProfileFromFirebase(profileToRemove).catch(err => {
-                            console.error('Error removing from Firebase:', err);
-                        });
-                    }
+                    // Helper function to remove locally
+                    const removeLocally = () => {
+                        allProfiles = allProfiles.filter(p => !(p.url === url && p.timestamp === timestamp));
+                        saveToStorage(allProfiles);
+                        filteredProfiles = filteredProfiles.filter(p => !(p.url === url && p.timestamp === timestamp));
+                        updateUI();
+                    };
                     
-                    // Remove by both url and timestamp to handle duplicate URLs
-                    allProfiles = allProfiles.filter(p => !(p.url === url && p.timestamp === timestamp));
-                    saveToStorage(allProfiles);
-                    filteredProfiles = filteredProfiles.filter(p => !(p.url === url && p.timestamp === timestamp));
-                    updateUI();
+                    // If Firebase is enabled, remove from Firebase and let real-time listener update UI
+                    if (firebaseInitialized && profileToRemove) {
+                        removeProfileFromFirebase(profileToRemove)
+                            .catch(err => {
+                                console.error('Error removing from Firebase:', err);
+                                // On Firebase error, remove locally as fallback
+                                removeLocally();
+                            });
+                        // Note: Real-time listener will automatically update allProfiles and UI
+                        // when Firebase data changes, so no need for removeLocally() on success
+                    } else {
+                        // Firebase not enabled, just remove locally
+                        removeLocally();
+                    }
                 }
             }
         }
@@ -1332,27 +1400,43 @@
                 timestamp: Date.now()
             };
             
-            // Add to Firebase (real-time sync will update other users)
-            addProfileToFirebase(newProfile).then(firebaseKey => {
+            // Helper function to add locally and update UI
+            const addLocally = (firebaseKey = null) => {
                 if (firebaseKey) {
                     newProfile.firebaseKey = firebaseKey;
                 }
-            }).catch(err => {
-                console.error('Error adding to Firebase:', err);
-            });
-            
-            allProfiles.unshift(newProfile);
-            saveToStorage(allProfiles);
+                allProfiles.unshift(newProfile);
+                saveToStorage(allProfiles);
+                updateUI();
+            };
             
             // Clear input
             urlInput.value = '';
             
-            // Show success
-            successMessage.textContent = `Game ban for "${name}" added successfully!`;
-            successMessage.style.display = 'block';
-            
-            // Update UI
-            updateUI();
+            // If Firebase is enabled, add to Firebase and let real-time listener update UI
+            if (firebaseInitialized) {
+                addProfileToFirebase(newProfile)
+                    .then(() => {
+                        // Show success - real-time listener will update the UI
+                        successMessage.textContent = `Game ban for "${name}" added successfully!`;
+                        successMessage.style.display = 'block';
+                    })
+                    .catch(err => {
+                        console.error('Error adding to Firebase:', err);
+                        // On Firebase error, add locally as fallback
+                        addLocally();
+                        successMessage.textContent = `Game ban for "${name}" added locally (sync failed).`;
+                        successMessage.style.display = 'block';
+                    });
+                // Note: Real-time listener will automatically update allProfiles and UI
+                // when Firebase data changes, so no need for addLocally() on success
+            } else {
+                // Firebase not enabled, just add locally
+                addLocally();
+                // Show success
+                successMessage.textContent = `Game ban for "${name}" added successfully!`;
+                successMessage.style.display = 'block';
+            }
             
             // Hide success message after 3 seconds
             setTimeout(() => {
@@ -1443,8 +1527,9 @@
             updateUI();
             
             // Set up real-time listener after initial load
+            // This will fetch existing Firebase data and set up continuous listening
             if (firebaseReady) {
-                setupRealtimeListener();
+                await setupRealtimeListener();
             }
         }
         
