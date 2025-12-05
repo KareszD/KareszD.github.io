@@ -209,7 +209,7 @@
             background-color: #1b2838;
             padding: 15px;
             border-radius: 8px;
-            min-height: 150px;
+            height: 300px;
         }
         .chart-box h4 {
             margin: 0 0 15px 0;
@@ -943,7 +943,7 @@
                     if (canvas && !box.querySelector('.chart-fallback')) {
                         const fallback = document.createElement('div');
                         fallback.className = 'chart-fallback';
-                        fallback.style.cssText = 'display:flex;align-items:center;justify-content:center;height:200px;color:#7a8b9a;text-align:center;';
+                        fallback.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;color:#7a8b9a;text-align:center;';
                         fallback.innerHTML = 'Charts will be visible when deployed to GitHub Pages';
                         canvas.style.display = 'none';
                         box.appendChild(fallback);
