@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CS2 Game Ban Tracker</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase SDK for real-time synchronization -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -389,11 +392,45 @@
             display: flex;
             gap: 10px;
         }
+        .sync-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .sync-status.online {
+            background-color: rgba(102, 192, 79, 0.2);
+            color: #66c04f;
+        }
+        .sync-status.offline {
+            background-color: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+        }
+        .sync-status .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .sync-status.online .dot {
+            background-color: #66c04f;
+            animation: pulse 2s infinite;
+        }
+        .sync-status.offline .dot {
+            background-color: #ff6b6b;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎮 CS2 Ban Tracker</h1>
+        <h1>🎮 CS2 Ban Tracker <span class="sync-status offline" id="syncStatus"><span class="dot"></span>Local Only</span></h1>
         
         <!-- Add Profile Section -->
         <div class="input-section">
@@ -515,6 +552,23 @@
         const STORAGE_KEY = 'cs2_banned_profiles';
         const DATA_FILE_PATH = 'data/profiles.json';
         
+        // Firebase configuration - Replace with your own Firebase project config
+        // To set up your own Firebase:
+        // 1. Go to https://console.firebase.google.com/
+        // 2. Create a new project
+        // 3. Go to Realtime Database and create a database
+        // 4. Set database rules to allow read/write (for testing)
+        // 5. Copy your config object here
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDemo-REPLACE-WITH-YOUR-KEY",
+            authDomain: "your-project.firebaseapp.com",
+            databaseURL: "https://your-project-default-rtdb.firebaseio.com",
+            projectId: "your-project",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+        
         // Steam URL validation patterns
         const STEAM_URL_PATTERNS = [
             /^https?:\/\/(www\.)?steamcommunity\.com\/id\/[a-zA-Z0-9_-]+\/?$/,
@@ -529,6 +583,8 @@
         let allProfiles = [];
         let filteredProfiles = [];
         let charts = {};
+        let firebaseDb = null;
+        let firebaseInitialized = false;
         
         // Generate sample profiles for this week and today
         function generateSampleProfiles() {
@@ -653,6 +709,162 @@
             } catch (e) {
                 console.error('Error saving to storage:', e);
             }
+        }
+        
+        // Initialize Firebase for real-time synchronization
+        function initializeFirebase() {
+            try {
+                // Check if Firebase is loaded
+                if (typeof firebase === 'undefined') {
+                    console.warn('Firebase SDK not loaded. Real-time sync disabled.');
+                    return false;
+                }
+                
+                // Check if config has placeholder values
+                if (FIREBASE_CONFIG.apiKey.includes('REPLACE') || 
+                    FIREBASE_CONFIG.databaseURL.includes('your-project')) {
+                    console.info('Firebase not configured. Using local storage only. To enable real-time sync across all users, configure Firebase in the FIREBASE_CONFIG object.');
+                    return false;
+                }
+                
+                // Initialize Firebase app
+                firebase.initializeApp(FIREBASE_CONFIG);
+                firebaseDb = firebase.database();
+                firebaseInitialized = true;
+                console.log('Firebase initialized successfully. Real-time sync enabled.');
+                updateSyncStatus(true);
+                return true;
+            } catch (e) {
+                console.error('Error initializing Firebase:', e);
+                return false;
+            }
+        }
+        
+        // Update sync status indicator
+        function updateSyncStatus(isOnline) {
+            const statusEl = document.getElementById('syncStatus');
+            if (statusEl) {
+                if (isOnline) {
+                    statusEl.className = 'sync-status online';
+                    statusEl.innerHTML = '<span class="dot"></span>Real-time Sync';
+                } else {
+                    statusEl.className = 'sync-status offline';
+                    statusEl.innerHTML = '<span class="dot"></span>Local Only';
+                }
+            }
+        }
+        
+        // Set up real-time listener for profile changes
+        function setupRealtimeListener() {
+            if (!firebaseInitialized || !firebaseDb) {
+                return;
+            }
+            
+            const profilesRef = firebaseDb.ref('profiles');
+            
+            // Listen for all changes to the profiles
+            profilesRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    // Convert object to array and handle Firebase data structure
+                    const firebaseProfiles = Object.keys(data).map(key => ({
+                        firebaseKey: key,
+                        ...data[key]
+                    }));
+                    
+                    // Only update if there are actual changes
+                    const currentUrls = new Set(allProfiles.map(p => p.url.toLowerCase()));
+                    const firebaseUrls = new Set(firebaseProfiles.map(p => p.url.toLowerCase()));
+                    
+                    // Check if there's a difference
+                    const hasChanges = firebaseProfiles.length !== allProfiles.length ||
+                        ![...currentUrls].every(url => firebaseUrls.has(url));
+                    
+                    if (hasChanges) {
+                        console.log('Real-time update received from Firebase');
+                        allProfiles = firebaseProfiles.map(p => ({
+                            url: p.url,
+                            name: p.name || extractNameFromUrl(p.url),
+                            banType: p.banType || 'Game',
+                            timestamp: p.timestamp || Date.now(),
+                            firebaseKey: p.firebaseKey
+                        }));
+                        saveToStorage(allProfiles);
+                        updateUI();
+                    }
+                } else {
+                    // No data in Firebase, upload current local data
+                    if (allProfiles.length > 0) {
+                        syncLocalToFirebase();
+                    }
+                }
+            }, (error) => {
+                console.error('Firebase real-time listener error:', error);
+            });
+        }
+        
+        // Sync local profiles to Firebase
+        function syncLocalToFirebase() {
+            if (!firebaseInitialized || !firebaseDb) {
+                return;
+            }
+            
+            const profilesRef = firebaseDb.ref('profiles');
+            allProfiles.forEach(profile => {
+                if (!profile.firebaseKey) {
+                    const newRef = profilesRef.push();
+                    newRef.set({
+                        url: profile.url,
+                        name: profile.name,
+                        banType: profile.banType,
+                        timestamp: profile.timestamp
+                    });
+                }
+            });
+        }
+        
+        // Add profile to Firebase
+        function addProfileToFirebase(profile) {
+            if (!firebaseInitialized || !firebaseDb) {
+                return Promise.resolve(null);
+            }
+            
+            const profilesRef = firebaseDb.ref('profiles');
+            const newRef = profilesRef.push();
+            return newRef.set({
+                url: profile.url,
+                name: profile.name,
+                banType: profile.banType,
+                timestamp: profile.timestamp
+            }).then(() => newRef.key);
+        }
+        
+        // Remove profile from Firebase
+        function removeProfileFromFirebase(profile) {
+            if (!firebaseInitialized || !firebaseDb) {
+                return Promise.resolve();
+            }
+            
+            // If we have the Firebase key, use it directly
+            if (profile.firebaseKey) {
+                return firebaseDb.ref(`profiles/${profile.firebaseKey}`).remove();
+            }
+            
+            // Otherwise, find by URL and timestamp
+            const profilesRef = firebaseDb.ref('profiles');
+            return profilesRef.orderByChild('url').equalTo(profile.url).once('value')
+                .then(snapshot => {
+                    const data = snapshot.val();
+                    if (data) {
+                        const keys = Object.keys(data);
+                        const keyToRemove = keys.find(key => 
+                            data[key].timestamp === profile.timestamp
+                        );
+                        if (keyToRemove) {
+                            return firebaseDb.ref(`profiles/${keyToRemove}`).remove();
+                        }
+                    }
+                });
         }
         
         // Fetch profiles from the repository JSON file
@@ -928,6 +1140,16 @@
                 const url = event.target.dataset.url;
                 const timestamp = parseInt(event.target.dataset.timestamp);
                 if (url) {
+                    // Find the profile to get Firebase key
+                    const profileToRemove = allProfiles.find(p => p.url === url && p.timestamp === timestamp);
+                    
+                    // Remove from Firebase (real-time sync will update other users)
+                    if (profileToRemove) {
+                        removeProfileFromFirebase(profileToRemove).catch(err => {
+                            console.error('Error removing from Firebase:', err);
+                        });
+                    }
+                    
                     // Remove by both url and timestamp to handle duplicate URLs
                     allProfiles = allProfiles.filter(p => !(p.url === url && p.timestamp === timestamp));
                     saveToStorage(allProfiles);
@@ -1110,6 +1332,15 @@
                 timestamp: Date.now()
             };
             
+            // Add to Firebase (real-time sync will update other users)
+            addProfileToFirebase(newProfile).then(firebaseKey => {
+                if (firebaseKey) {
+                    newProfile.firebaseKey = firebaseKey;
+                }
+            }).catch(err => {
+                console.error('Error adding to Firebase:', err);
+            });
+            
             allProfiles.unshift(newProfile);
             saveToStorage(allProfiles);
             
@@ -1205,8 +1436,16 @@
         
         // Initialize
         async function init() {
+            // Initialize Firebase for real-time sync
+            const firebaseReady = initializeFirebase();
+            
             await initializeProfiles();
             updateUI();
+            
+            // Set up real-time listener after initial load
+            if (firebaseReady) {
+                setupRealtimeListener();
+            }
         }
         
         init();
