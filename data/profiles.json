@@ -2,10 +2,16 @@
   "profiles": [
     {
       "url": "https://steamcommunity.com/id/exampleuser1",
+      "name": "ExampleUser1",
+      "hours": 1500,
+      "banType": "VAC",
       "timestamp": 1733400000000
     },
     {
       "url": "https://steamcommunity.com/profiles/76561198000000001",
+      "name": "SteamPlayer001",
+      "hours": 850,
+      "banType": "Game",
       "timestamp": 1733300000000
     }
   ]
