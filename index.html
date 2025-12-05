@@ -1034,19 +1034,25 @@
                         <span class="badge ${badgeClass}">${escapeHtml(profile.banType)}</span>
                         <span class="profile-hours">🎮 ${profile.hours.toLocaleString()} hrs</span>
                         <span class="profile-date">📅 ${escapeHtml(dateStr)}</span>
-                        <button class="profile-delete" onclick="deleteProfile('${escapeHtml(profile.url)}')" title="Delete">🗑️</button>
+                        <button class="profile-delete" data-url="${escapeHtml(profile.url)}" title="Delete">🗑️</button>
                     </li>
                 `;
             }).join('');
+            
+            // Add event delegation for delete buttons
+            profileList.addEventListener('click', handleDeleteClick);
         }
         
-        // Delete profile
-        function deleteProfile(url) {
-            if (confirm('Are you sure you want to delete this profile?')) {
-                allProfiles = allProfiles.filter(p => p.url !== url);
-                saveToStorage(allProfiles);
-                filteredProfiles = filteredProfiles.filter(p => p.url !== url);
-                updateUI();
+        // Handle delete button clicks using event delegation
+        function handleDeleteClick(event) {
+            if (event.target.classList.contains('profile-delete')) {
+                const url = event.target.dataset.url;
+                if (url && confirm('Are you sure you want to delete this profile?')) {
+                    allProfiles = allProfiles.filter(p => p.url !== url);
+                    saveToStorage(allProfiles);
+                    filteredProfiles = filteredProfiles.filter(p => p.url !== url);
+                    updateUI();
+                }
             }
         }
         
@@ -1221,17 +1227,18 @@
             const cumulativeData = [];
             let cumulative = 0;
             
+            // Use Map for O(n) complexity instead of O(n²)
+            const dateMap = new Map();
             sorted.forEach(p => {
                 cumulative++;
                 const date = new Date(p.timestamp).toLocaleDateString();
-                // Update or add
-                const existing = cumulativeData.find(d => d.date === date);
-                if (existing) {
-                    existing.count = cumulative;
-                } else {
-                    cumulativeData.push({ date, count: cumulative });
-                }
+                dateMap.set(date, cumulative);
             });
+            
+            // Convert Map to array maintaining order
+            for (const [date, count] of dateMap) {
+                cumulativeData.push({ date, count });
+            }
             
             if (charts.cumulative) {
                 charts.cumulative.destroy();
@@ -1297,7 +1304,8 @@
             
             const url = urlInput.value.trim();
             const name = nameInput.value.trim() || extractNameFromUrl(url);
-            const hours = parseInt(hoursInput.value) || 0;
+            const hoursValue = parseInt(hoursInput.value, 10);
+            const hours = Number.isNaN(hoursValue) || hoursValue < 0 ? 0 : hoursValue;
             const banType = banTypeSelect.value;
             
             // Clear messages
@@ -1353,6 +1361,16 @@
             }, 3000);
         }
         
+        // Escape CSV cell value properly
+        function escapeCsvCell(value) {
+            const str = String(value);
+            // If the value contains quotes, commas, or newlines, escape it
+            if (str.includes('"') || str.includes(',') || str.includes('\n') || str.includes('\r')) {
+                return '"' + str.replace(/"/g, '""') + '"';
+            }
+            return '"' + str + '"';
+        }
+        
         // Export to CSV
         function exportCSV() {
             const headers = ['Name', 'URL', 'Hours', 'Ban Type', 'Date'];
@@ -1364,7 +1382,7 @@
                 new Date(p.timestamp).toISOString()
             ]);
             
-            const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+            const csv = [headers, ...rows].map(row => row.map(cell => escapeCsvCell(cell)).join(',')).join('\n');
             downloadFile(csv, 'cs2_bans.csv', 'text/csv');
         }
         
