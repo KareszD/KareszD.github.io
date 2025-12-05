@@ -1,2 +1,1 @@
-# .github.io
-cs2
+https://kareszd.github.io
