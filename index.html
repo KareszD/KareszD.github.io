@@ -63,10 +63,15 @@
         button:hover {
             background-color: #4fa3d1;
         }
-        .error-message {
-            color: #ff6b6b;
+        .message {
             margin-top: 10px;
             display: none;
+        }
+        .error-message {
+            color: #ff6b6b;
+        }
+        .success-message {
+            color: #66c0f4;
         }
         .stats-section {
             display: grid;
@@ -115,6 +120,8 @@
             background-color: #1b2838;
             margin-bottom: 8px;
             border-radius: 4px;
+            flex-wrap: wrap;
+            gap: 8px;
         }
         .profile-item:last-child {
             margin-bottom: 0;
@@ -123,6 +130,8 @@
             color: #66c0f4;
             text-decoration: none;
             word-break: break-all;
+            flex: 1;
+            min-width: 200px;
         }
         .profile-link:hover {
             text-decoration: underline;
@@ -131,28 +140,21 @@
             color: #7a8b9a;
             font-size: 12px;
             white-space: nowrap;
-            margin-left: 10px;
-        }
-        .delete-btn {
-            background-color: #ff6b6b;
-            padding: 6px 12px;
-            font-size: 12px;
-            margin-left: 10px;
-        }
-        .delete-btn:hover {
-            background-color: #e05555;
         }
         .empty-message {
             text-align: center;
             color: #7a8b9a;
             padding: 20px;
         }
-        .clear-all-btn {
-            background-color: #ff6b6b;
-            margin-top: 15px;
+        .loading-message {
+            text-align: center;
+            color: #66c0f4;
+            padding: 20px;
         }
-        .clear-all-btn:hover {
-            background-color: #e05555;
+        .error-loading {
+            text-align: center;
+            color: #ff6b6b;
+            padding: 20px;
         }
     </style>
 </head>
@@ -165,39 +167,41 @@
                 <input type="text" id="profileInput" placeholder="Enter Steam profile link (e.g., https://steamcommunity.com/id/username)" />
                 <button id="addButton">Add Profile</button>
             </div>
-            <p class="error-message" id="errorMessage"></p>
+            <p class="message error-message" id="errorMessage"></p>
+            <p class="message success-message" id="successMessage"></p>
         </div>
 
         <div class="stats-section">
             <div class="stat-card">
                 <h3>Today</h3>
-                <div class="count" id="todayCount">0</div>
+                <div class="count" id="todayCount">-</div>
             </div>
             <div class="stat-card">
                 <h3>This Week</h3>
-                <div class="count" id="weekCount">0</div>
+                <div class="count" id="weekCount">-</div>
             </div>
             <div class="stat-card">
                 <h3>This Month</h3>
-                <div class="count" id="monthCount">0</div>
+                <div class="count" id="monthCount">-</div>
             </div>
             <div class="stat-card">
                 <h3>Total</h3>
-                <div class="count" id="totalCount">0</div>
+                <div class="count" id="totalCount">-</div>
             </div>
         </div>
 
         <div class="profiles-section">
             <h2>Saved Profiles</h2>
             <ul class="profile-list" id="profileList">
-                <li class="empty-message">No profiles saved yet.</li>
+                <li class="loading-message">Loading profiles...</li>
             </ul>
-            <button class="clear-all-btn" id="clearAllButton" style="display: none;">Clear All Profiles</button>
         </div>
     </div>
 
     <script>
-        const STORAGE_KEY = 'steamProfiles';
+        // Configuration
+        const GITHUB_REPO = 'KareszD/KareszD.github.io';
+        const DATA_FILE_PATH = 'data/profiles.json';
         
         // Steam URL validation patterns (defined once as constants)
         const STEAM_URL_PATTERNS = [
@@ -205,15 +209,24 @@
             /^https?:\/\/(www\.)?steamcommunity\.com\/profiles\/\d+\/?$/
         ];
         
-        // Get profiles from localStorage
-        function getProfiles() {
-            const data = localStorage.getItem(STORAGE_KEY);
-            return data ? JSON.parse(data) : [];
-        }
+        // Store profiles globally
+        let allProfiles = [];
         
-        // Save profiles to localStorage
-        function saveProfiles(profiles) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
+        // Fetch profiles from the repository JSON file
+        async function fetchProfiles() {
+            try {
+                // Add cache-busting parameter to get fresh data
+                const cacheBuster = new Date().getTime();
+                const response = await fetch(`${DATA_FILE_PATH}?t=${cacheBuster}`);
+                if (!response.ok) {
+                    throw new Error('Failed to load profiles');
+                }
+                const data = await response.json();
+                return data.profiles || [];
+            } catch (error) {
+                console.error('Error fetching profiles:', error);
+                return null;
+            }
         }
         
         // Validate Steam profile URL
@@ -221,24 +234,23 @@
             return STEAM_URL_PATTERNS.some(pattern => pattern.test(url));
         }
         
-        // Get start of today
+        // Get start of today (UTC for consistency across timezones)
         function getStartOfToday() {
             const now = new Date();
-            return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).getTime();
         }
         
-        // Get start of this week (Sunday)
+        // Get start of this week (Sunday, UTC)
         function getStartOfWeek() {
             const now = new Date();
-            const dayOfWeek = now.getDay();
-            const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
-            return startOfWeek.getTime();
+            const dayOfWeek = now.getUTCDay();
+            return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - dayOfWeek)).getTime();
         }
         
-        // Get start of this month
+        // Get start of this month (UTC)
         function getStartOfMonth() {
             const now = new Date();
-            return new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+            return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).getTime();
         }
         
         // Calculate counts
@@ -266,9 +278,16 @@
             };
         }
         
-        // Update the UI
-        function updateUI() {
-            const profiles = getProfiles();
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Update the UI with profiles
+        function updateUI(profiles) {
+            allProfiles = profiles;
             const counts = calculateCounts(profiles);
             
             // Update counts
@@ -279,54 +298,46 @@
             
             // Update profile list
             const profileList = document.getElementById('profileList');
-            const clearAllButton = document.getElementById('clearAllButton');
             
             if (profiles.length === 0) {
-                profileList.innerHTML = '<li class="empty-message">No profiles saved yet.</li>';
-                clearAllButton.style.display = 'none';
+                profileList.innerHTML = '<li class="empty-message">No profiles saved yet. Be the first to add one!</li>';
             } else {
-                // Create a map of original indices for efficient lookup
-                const indexMap = new Map();
-                profiles.forEach((profile, idx) => {
-                    const key = profile.url + '|' + profile.timestamp;
-                    indexMap.set(key, idx);
-                });
-                
                 // Sort by timestamp descending (newest first)
                 const sortedProfiles = [...profiles].sort((a, b) => b.timestamp - a.timestamp);
                 
                 profileList.innerHTML = sortedProfiles.map((profile) => {
                     const date = new Date(profile.timestamp);
                     const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const key = profile.url + '|' + profile.timestamp;
-                    const originalIndex = indexMap.get(key);
                     return `
                         <li class="profile-item">
                             <a href="${escapeHtml(profile.url)}" target="_blank" rel="noopener noreferrer" class="profile-link">${escapeHtml(profile.url)}</a>
-                            <span class="profile-date">${dateStr}</span>
-                            <button class="delete-btn" onclick="deleteProfile(${originalIndex})">Delete</button>
+                            <span class="profile-date">${escapeHtml(dateStr)}</span>
                         </li>
                     `;
                 }).join('');
-                clearAllButton.style.display = 'block';
             }
         }
         
-        // Escape HTML to prevent XSS
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        // Show error in profile list
+        function showLoadError() {
+            document.getElementById('profileList').innerHTML = 
+                '<li class="error-loading">Failed to load profiles. Please refresh the page.</li>';
+            document.getElementById('todayCount').textContent = '0';
+            document.getElementById('weekCount').textContent = '0';
+            document.getElementById('monthCount').textContent = '0';
+            document.getElementById('totalCount').textContent = '0';
         }
         
-        // Add a new profile
-        function addProfile() {
+        // Submit a new profile (opens GitHub issue)
+        function submitProfile() {
             const input = document.getElementById('profileInput');
             const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
             const url = input.value.trim();
             
-            // Clear previous error
+            // Clear previous messages
             errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
             
             if (!url) {
                 errorMessage.textContent = 'Please enter a Steam profile URL.';
@@ -340,55 +351,48 @@
                 return;
             }
             
-            const profiles = getProfiles();
-            
-            // Check for duplicates using Set for O(1) lookup
+            // Check for duplicates
             const urlLower = url.toLowerCase();
-            const existingUrls = new Set(profiles.map(p => p.url.toLowerCase()));
+            const existingUrls = new Set(allProfiles.map(p => p.url.toLowerCase()));
             if (existingUrls.has(urlLower)) {
                 errorMessage.textContent = 'This profile has already been added.';
                 errorMessage.style.display = 'block';
                 return;
             }
             
-            // Add new profile
-            profiles.push({
-                url: url,
-                timestamp: Date.now()
-            });
+            // Create GitHub issue URL with pre-filled content
+            const issueTitle = encodeURIComponent(`Add Steam Profile: ${url}`);
+            const issueBody = encodeURIComponent(`Please add this Steam profile to the tracker:\n\n**Profile URL:** ${url}\n\n---\n*This issue was created from the Steam Profile Tracker website.*`);
+            const issueUrl = `https://github.com/${GITHUB_REPO}/issues/new?title=${issueTitle}&body=${issueBody}&labels=profile-submission`;
             
-            saveProfiles(profiles);
-            updateUI();
+            // Open GitHub issue in new tab
+            window.open(issueUrl, '_blank');
+            
+            // Show success message
+            successMessage.textContent = 'A new tab has opened to submit your profile. Please complete the GitHub issue to add your profile.';
+            successMessage.style.display = 'block';
             input.value = '';
         }
         
-        // Delete a profile
-        function deleteProfile(index) {
-            const profiles = getProfiles();
-            profiles.splice(index, 1);
-            saveProfiles(profiles);
-            updateUI();
-        }
-        
-        // Clear all profiles
-        function clearAllProfiles() {
-            if (confirm('Are you sure you want to delete all saved profiles?')) {
-                saveProfiles([]);
-                updateUI();
-            }
-        }
-        
         // Event listeners
-        document.getElementById('addButton').addEventListener('click', addProfile);
-        document.getElementById('clearAllButton').addEventListener('click', clearAllProfiles);
+        document.getElementById('addButton').addEventListener('click', submitProfile);
         document.getElementById('profileInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                addProfile();
+                submitProfile();
             }
         });
         
-        // Initialize UI on page load
-        updateUI();
+        // Initialize on page load
+        async function init() {
+            const profiles = await fetchProfiles();
+            if (profiles !== null) {
+                updateUI(profiles);
+            } else {
+                showLoadError();
+            }
+        }
+        
+        init();
     </script>
 </body>
 </html>
