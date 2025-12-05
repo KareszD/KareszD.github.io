@@ -525,6 +525,10 @@
             /^https?:\/\/(www\.)?steamcommunity\.com\/profiles\/\d+\/?$/
         ];
         
+        // Configuration constants
+        const DUPLICATE_COOLDOWN_MINUTES = 30;
+        const CHART_DISPLAY_LIMITS = { day: 30, week: 12, month: 12 };
+        
         // Store profiles globally
         let allProfiles = [];
         let filteredProfiles = [];
@@ -900,6 +904,7 @@
             profileList.innerHTML = sorted.map((profile, index) => {
                 const date = new Date(profile.timestamp);
                 const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const safeTimestamp = Number(profile.timestamp);
                 
                 return `
                     <li class="profile-item">
@@ -910,7 +915,7 @@
                         </div>
                         <span class="badge badge-game">Game Ban</span>
                         <span class="profile-date">📅 ${escapeHtml(dateStr)}</span>
-                        <button class="profile-delete" data-url="${escapeHtml(profile.url)}" data-timestamp="${profile.timestamp}" title="Delete">🗑️</button>
+                        <button class="profile-delete" data-url="${escapeHtml(profile.url)}" data-timestamp="${safeTimestamp}" title="Delete">🗑️</button>
                     </li>
                 `;
             }).join('');
@@ -1001,8 +1006,7 @@
             }
             
             // Limit to last N entries based on interval
-            const limits = { day: 30, week: 12, month: 12 };
-            const limit = limits[interval] || 30;
+            const limit = CHART_DISPLAY_LIMITS[interval] || 30;
             const displayKeys = sortedKeys.slice(-limit);
             
             if (charts.timeline) {
@@ -1084,16 +1088,17 @@
                 return;
             }
             
-            // Check for duplicates within 30 minutes (1800000 ms)
-            const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
+            // Check for duplicates within cooldown period
+            const cooldownMs = DUPLICATE_COOLDOWN_MINUTES * 60 * 1000;
+            const cooldownThreshold = Date.now() - cooldownMs;
             const recentDuplicate = allProfiles.find(p => 
                 p.url.toLowerCase() === url.toLowerCase() && 
-                p.timestamp > thirtyMinutesAgo
+                p.timestamp > cooldownThreshold
             );
             
             if (recentDuplicate) {
                 const timeSinceLastAdd = Math.ceil((Date.now() - recentDuplicate.timestamp) / 60000);
-                const waitTime = 30 - timeSinceLastAdd;
+                const waitTime = DUPLICATE_COOLDOWN_MINUTES - timeSinceLastAdd;
                 errorMessage.textContent = `This profile was added ${timeSinceLastAdd} minute(s) ago. Please wait ${waitTime} more minute(s) before adding again.`;
                 errorMessage.style.display = 'block';
                 return;
