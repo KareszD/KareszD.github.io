@@ -3,468 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://www.gstatic.com; connect-src 'self' https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; connect-src 'self' https://api.jsonbin.io; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
     <title>CS2 Game Ban Tracker</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Firebase SDK for real-time synchronization -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <style>
-        * {
-            box-sizing: border-box;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #1b2838;
-            color: #c7d5e0;
-            margin: 0;
-            padding: 20px;
-            min-height: 100vh;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        h1 {
-            color: #66c0f4;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        h2 {
-            color: #66c0f4;
-            margin-top: 0;
-        }
-        .input-section {
-            background-color: #2a475e;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        .input-group {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 15px;
-        }
-        .input-row {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        .input-field {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        .input-field label {
-            font-size: 12px;
-            color: #7a8b9a;
-        }
-        input[type="text"], input[type="number"], input[type="date"] {
-            padding: 12px;
-            border: none;
-            border-radius: 4px;
-            background-color: #1b2838;
-            color: #c7d5e0;
-            font-size: 14px;
-        }
-        input[type="text"] {
-            flex: 1;
-            min-width: 200px;
-        }
-        input[type="number"] {
-            width: 120px;
-        }
-        input[type="date"] {
-            width: 160px;
-        }
-        input::placeholder {
-            color: #7a8b9a;
-        }
-        select {
-            padding: 12px;
-            border: none;
-            border-radius: 4px;
-            background-color: #1b2838;
-            color: #c7d5e0;
-            font-size: 14px;
-            cursor: pointer;
-        }
-        button {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 4px;
-            background-color: #66c0f4;
-            color: #1b2838;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        button:hover {
-            background-color: #4fa3d1;
-        }
-        button.secondary {
-            background-color: #4a6572;
-            color: #c7d5e0;
-        }
-        button.secondary:hover {
-            background-color: #5a7582;
-        }
-        button.danger {
-            background-color: #ff6b6b;
-            color: #1b2838;
-        }
-        button.danger:hover {
-            background-color: #ff5252;
-        }
-        .message {
-            margin-top: 10px;
-            display: none;
-        }
-        .error-message {
-            color: #ff6b6b;
-        }
-        .success-message {
-            color: #66c0f4;
-        }
-        .stats-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .stat-card {
-            background-color: #2a475e;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-        .stat-card.active {
-            border: 2px solid #66c0f4;
-        }
-        .stat-card h3 {
-            margin: 0 0 10px 0;
-            color: #66c0f4;
-            font-size: 14px;
-            text-transform: uppercase;
-        }
-        .stat-card .count {
-            font-size: 36px;
-            font-weight: bold;
-            color: #ffffff;
-        }
-        
-        /* Interactive Statistics Panel */
-        .statistics-panel {
-            background-color: #2a475e;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .filter-section {
-            background-color: #1b2838;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        .filter-row {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            align-items: flex-end;
-            margin-bottom: 15px;
-        }
-        .filter-row:last-child {
-            margin-bottom: 0;
-        }
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        .filter-group label {
-            font-size: 12px;
-            color: #7a8b9a;
-            text-transform: uppercase;
-        }
-        .charts-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        .chart-box {
-            background-color: #1b2838;
-            padding: 15px;
-            border-radius: 8px;
-            height: 300px;
-        }
-        .chart-box h4 {
-            margin: 0 0 15px 0;
-            color: #66c0f4;
-            font-size: 14px;
-        }
-        .stats-summary {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .summary-item {
-            background-color: #1b2838;
-            padding: 12px;
-            border-radius: 6px;
-            text-align: center;
-        }
-        .summary-item .label {
-            font-size: 11px;
-            color: #7a8b9a;
-            text-transform: uppercase;
-            margin-bottom: 5px;
-        }
-        .summary-item .value {
-            font-size: 20px;
-            font-weight: bold;
-            color: #66c0f4;
-        }
-        
-        .profiles-section {
-            background-color: #2a475e;
-            padding: 20px;
-            border-radius: 8px;
-        }
-        .profiles-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .profile-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .profile-item {
-            display: grid;
-            grid-template-columns: 1fr auto auto auto;
-            gap: 15px;
-            align-items: center;
-            padding: 12px;
-            background-color: #1b2838;
-            margin-bottom: 8px;
-            border-radius: 4px;
-        }
-        @media (max-width: 768px) {
-            .profile-item {
-                grid-template-columns: 1fr;
-                gap: 8px;
-            }
-        }
-        .profile-item:last-child {
-            margin-bottom: 0;
-        }
-        .profile-link {
-            color: #66c0f4;
-            text-decoration: none;
-            word-break: break-all;
-        }
-        .profile-link:hover {
-            text-decoration: underline;
-        }
-        .profile-name {
-            color: #ffffff;
-            font-weight: bold;
-            font-size: 14px;
-        }
-        .profile-date {
-            color: #7a8b9a;
-            font-size: 12px;
-            white-space: nowrap;
-        }
-        .profile-delete {
-            background: none;
-            border: none;
-            color: #ff6b6b;
-            cursor: pointer;
-            padding: 5px;
-            font-size: 16px;
-            opacity: 0.6;
-            transition: opacity 0.2s;
-        }
-        .profile-delete:hover {
-            opacity: 1;
-            background: none;
-        }
-        .empty-message {
-            text-align: center;
-            color: #7a8b9a;
-            padding: 20px;
-        }
-        .loading-message {
-            text-align: center;
-            color: #66c0f4;
-            padding: 20px;
-        }
-        .error-loading {
-            text-align: center;
-            color: #ff6b6b;
-            padding: 20px;
-        }
-        .results-count {
-            color: #7a8b9a;
-            font-size: 14px;
-        }
-        .sort-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        .sort-controls label {
-            color: #7a8b9a;
-            font-size: 12px;
-        }
-        .tabs {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 20px;
-        }
-        .tab {
-            padding: 10px 20px;
-            background-color: #1b2838;
-            border: none;
-            border-radius: 4px 4px 0 0;
-            color: #7a8b9a;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .tab.active {
-            background-color: #2a475e;
-            color: #66c0f4;
-        }
-        .tab:hover:not(.active) {
-            background-color: #223344;
-        }
-        .tab-content {
-            display: none;
-        }
-        .tab-content.active {
-            display: block;
-        }
-        .badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 11px;
-            font-weight: bold;
-        }
-        .badge-vac {
-            background-color: #ff6b6b;
-            color: #1b2838;
-        }
-        .badge-game {
-            background-color: #ffa500;
-            color: #1b2838;
-        }
-        .badge-trade {
-            background-color: #9370db;
-            color: #1b2838;
-        }
-        .export-buttons {
-            display: flex;
-            gap: 10px;
-        }
-        .sync-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        .sync-status.online {
-            background-color: rgba(102, 192, 79, 0.2);
-            color: #66c04f;
-        }
-        .sync-status.offline {
-            background-color: rgba(255, 107, 107, 0.2);
-            color: #ff6b6b;
-        }
-        .sync-status .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-        .sync-status.online .dot {
-            background-color: #66c04f;
-            animation: pulse 2s infinite;
-        }
-        .sync-status.offline .dot {
-            background-color: #ff6b6b;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background-color: #1b2838; color: #c7d5e0; margin: 0; padding: 20px; min-height: 100vh; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #66c0f4; text-align: center; margin-bottom: 30px; }
+        h2 { color: #66c0f4; margin-top: 0; }
+        .input-section { background-color: #2a475e; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .input-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+        input[type="text"], input[type="number"], input[type="date"] { padding: 12px; border: none; border-radius: 4px; background-color: #1b2838; color: #c7d5e0; font-size: 14px; }
+        input[type="text"] { flex: 1; min-width: 200px; }
+        input[type="date"] { width: 160px; }
+        input::placeholder { color: #7a8b9a; }
+        select { padding: 12px; border: none; border-radius: 4px; background-color: #1b2838; color: #c7d5e0; font-size: 14px; cursor: pointer; }
+        button { padding: 12px 24px; border: none; border-radius: 4px; background-color: #66c0f4; color: #1b2838; font-size: 14px; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+        button:hover { background-color: #4fa3d1; }
+        button.secondary { background-color: #4a6572; color: #c7d5e0; }
+        button.secondary:hover { background-color: #5a7582; }
+        .message { margin-top: 10px; display: none; }
+        .error-message { color: #ff6b6b; }
+        .success-message { color: #66c0f4; }
+        .stats-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background-color: #2a475e; padding: 20px; border-radius: 8px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .stat-card.active { border: 2px solid #66c0f4; }
+        .stat-card h3 { margin: 0 0 10px 0; color: #66c0f4; font-size: 14px; text-transform: uppercase; }
+        .stat-card .count { font-size: 36px; font-weight: bold; color: #ffffff; }
+        .statistics-panel { background-color: #2a475e; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .filter-section { background-color: #1b2838; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .filter-row { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 15px; }
+        .filter-row:last-child { margin-bottom: 0; }
+        .filter-group { display: flex; flex-direction: column; gap: 5px; }
+        .filter-group label { font-size: 12px; color: #7a8b9a; text-transform: uppercase; }
+        .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .chart-box { background-color: #1b2838; padding: 15px; border-radius: 8px; height: 300px; }
+        .chart-box h4 { margin: 0 0 15px 0; color: #66c0f4; font-size: 14px; }
+        .stats-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .summary-item { background-color: #1b2838; padding: 12px; border-radius: 6px; text-align: center; }
+        .summary-item .label { font-size: 11px; color: #7a8b9a; text-transform: uppercase; margin-bottom: 5px; }
+        .summary-item .value { font-size: 20px; font-weight: bold; color: #66c0f4; }
+        .profiles-section { background-color: #2a475e; padding: 20px; border-radius: 8px; }
+        .profiles-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        .profile-list { list-style: none; padding: 0; margin: 0; max-height: 400px; overflow-y: auto; }
+        .profile-item { display: grid; grid-template-columns: 1fr auto auto auto; gap: 15px; align-items: center; padding: 12px; background-color: #1b2838; margin-bottom: 8px; border-radius: 4px; }
+        @media (max-width: 768px) { .profile-item { grid-template-columns: 1fr; gap: 8px; } }
+        .profile-link { color: #66c0f4; text-decoration: none; word-break: break-all; }
+        .profile-link:hover { text-decoration: underline; }
+        .profile-name { color: #ffffff; font-weight: bold; font-size: 14px; }
+        .profile-date { color: #7a8b9a; font-size: 12px; white-space: nowrap; }
+        .profile-delete { background: none; border: none; color: #ff6b6b; cursor: pointer; padding: 5px; font-size: 16px; opacity: 0.6; transition: opacity 0.2s; }
+        .profile-delete:hover { opacity: 1; background: none; }
+        .empty-message, .loading-message { text-align: center; color: #7a8b9a; padding: 20px; }
+        .loading-message { color: #66c0f4; }
+        .results-count { color: #7a8b9a; font-size: 14px; }
+        .sort-controls { display: flex; gap: 10px; align-items: center; }
+        .sort-controls label { color: #7a8b9a; font-size: 12px; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; }
+        .badge-game { background-color: #ffa500; color: #1b2838; }
+        .export-buttons { display: flex; gap: 10px; }
+        .sync-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        .sync-status.online { background-color: rgba(102, 192, 79, 0.2); color: #66c04f; }
+        .sync-status.offline { background-color: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
+        .sync-status .dot { width: 8px; height: 8px; border-radius: 50%; }
+        .sync-status.online .dot { background-color: #66c04f; animation: pulse 2s infinite; }
+        .sync-status.offline .dot { background-color: #ff6b6b; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .refresh-btn { padding: 8px 16px; font-size: 12px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎮 CS2 Ban Tracker <span class="sync-status offline" id="syncStatus"><span class="dot"></span>Local Only</span></h1>
+        <h1>🎮 CS2 Ban Tracker <span class="sync-status offline" id="syncStatus"><span class="dot"></span>Connecting...</span></h1>
         
-        <!-- Add Profile Section -->
         <div class="input-section">
             <h2>➕ Add Game Ban</h2>
             <div class="input-group">
                 <input type="text" id="profileInput" placeholder="Enter Steam profile link (e.g., https://steamcommunity.com/id/username)" />
                 <button id="addButton">Add Ban</button>
+                <button class="secondary refresh-btn" id="refreshButton" title="Refresh data from server">🔄 Refresh</button>
             </div>
             <p class="message error-message" id="errorMessage"></p>
             <p class="message success-message" id="successMessage"></p>
         </div>
 
-        <!-- Quick Stats Cards -->
         <div class="stats-section">
-            <div class="stat-card" data-filter="today" title="Click to filter">
-                <h3>Today</h3>
-                <div class="count" id="todayCount">-</div>
-            </div>
-            <div class="stat-card" data-filter="week" title="Click to filter">
-                <h3>This Week</h3>
-                <div class="count" id="weekCount">-</div>
-            </div>
-            <div class="stat-card" data-filter="month" title="Click to filter">
-                <h3>This Month</h3>
-                <div class="count" id="monthCount">-</div>
-            </div>
-            <div class="stat-card" data-filter="all" title="Click to filter">
-                <h3>Total</h3>
-                <div class="count" id="totalCount">-</div>
-            </div>
+            <div class="stat-card" data-filter="today" title="Click to filter"><h3>Today</h3><div class="count" id="todayCount">-</div></div>
+            <div class="stat-card" data-filter="week" title="Click to filter"><h3>This Week</h3><div class="count" id="weekCount">-</div></div>
+            <div class="stat-card" data-filter="month" title="Click to filter"><h3>This Month</h3><div class="count" id="monthCount">-</div></div>
+            <div class="stat-card" data-filter="all" title="Click to filter"><h3>Total</h3><div class="count" id="totalCount">-</div></div>
         </div>
 
-        <!-- Interactive Statistics Panel -->
         <div class="statistics-panel">
             <div class="panel-header">
                 <h2>📊 Interactive Statistics</h2>
@@ -473,21 +105,12 @@
                     <button class="secondary" id="exportJSON">Export JSON</button>
                 </div>
             </div>
-            
-            <!-- Filters -->
             <div class="filter-section">
                 <h4 style="margin: 0 0 15px 0; color: #c7d5e0;">🔍 Filters & Chart Settings</h4>
                 <div class="filter-row">
-                    <div class="filter-group">
-                        <label>Start Date</label>
-                        <input type="date" id="filterStartDate" />
-                    </div>
-                    <div class="filter-group">
-                        <label>End Date</label>
-                        <input type="date" id="filterEndDate" />
-                    </div>
-                    <div class="filter-group">
-                        <label>Quick Filter</label>
+                    <div class="filter-group"><label>Start Date</label><input type="date" id="filterStartDate" /></div>
+                    <div class="filter-group"><label>End Date</label><input type="date" id="filterEndDate" /></div>
+                    <div class="filter-group"><label>Quick Filter</label>
                         <select id="quickFilter">
                             <option value="">Custom</option>
                             <option value="today">Today</option>
@@ -497,8 +120,7 @@
                             <option value="all">All Time</option>
                         </select>
                     </div>
-                    <div class="filter-group">
-                        <label>Chart Interval</label>
+                    <div class="filter-group"><label>Chart Interval</label>
                         <select id="chartInterval">
                             <option value="day">Daily</option>
                             <option value="week">Weekly</option>
@@ -509,30 +131,14 @@
                     <button class="secondary" id="resetFilters">Reset</button>
                 </div>
             </div>
-
-            <!-- Stats Summary -->
-            <div class="stats-summary">
-                <div class="summary-item">
-                    <div class="label">Filtered Results</div>
-                    <div class="value" id="filteredCount">0</div>
-                </div>
-            </div>
-
-            <!-- Charts -->
-            <div class="charts-container">
-                <div class="chart-box" style="grid-column: 1 / -1;">
-                    <h4>📅 Bans Over Time</h4>
-                    <canvas id="timelineChart"></canvas>
-                </div>
-            </div>
+            <div class="stats-summary"><div class="summary-item"><div class="label">Filtered Results</div><div class="value" id="filteredCount">0</div></div></div>
+            <div class="charts-container"><div class="chart-box" style="grid-column: 1 / -1;"><h4>📅 Bans Over Time</h4><canvas id="timelineChart"></canvas></div></div>
         </div>
 
-        <!-- Profiles List -->
         <div class="profiles-section">
             <div class="profiles-header">
                 <h2>🚫 Game Banned Profiles</h2>
-                <div class="sort-controls">
-                    <label>Sort by:</label>
+                <div class="sort-controls"><label>Sort by:</label>
                     <select id="sortBy">
                         <option value="date-desc">Date (Newest)</option>
                         <option value="date-asc">Date (Oldest)</option>
@@ -542,460 +148,119 @@
                 </div>
             </div>
             <p class="results-count" id="resultsCount"></p>
-            <ul class="profile-list" id="profileList">
-                <li class="loading-message">Loading profiles...</li>
-            </ul>
+            <ul class="profile-list" id="profileList"><li class="loading-message">Loading profiles...</li></ul>
         </div>
     </div>
 
     <script>
-        // Configuration
-        const STORAGE_KEY = 'cs2_banned_profiles';
-        const DATA_FILE_PATH = 'data/profiles.json';
+        // JSONBin.io Configuration - This is a shared database for all users!
+        const JSONBIN_BIN_ID = '6752445ead19ca34f8d70e71';
+        const JSONBIN_API_KEY = '$2a$10$mP9sKxlT5VxUJx5YxvPQz.gPQjVZK5hfzGZM8M7PKsJOVZ3VlCHYe';
+        const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
         
-        // Firebase configuration
-        const FIREBASE_CONFIG = {
-            apiKey: "AIzaSyADDX5Y-cCerIvz6jG9PqD2K5gkNSWyUao",
-            authDomain: "cs2ban-6062f.firebaseapp.com",
-            databaseURL: "https://cs2ban-6062f-default-rtdb.firebaseio.com",
-            projectId: "cs2ban-6062f",
-            storageBucket: "cs2ban-6062f.firebasestorage.app",
-            messagingSenderId: "766801195282",
-            appId: "1:766801195282:web:c6e065225d09580ac3c3cb",
-            measurementId: "G-2MCKNGYHQR"
-        };
-        
-        // Steam URL validation patterns
         const STEAM_URL_PATTERNS = [
             /^https?:\/\/(www\.)?steamcommunity\.com\/id\/[a-zA-Z0-9_-]+\/?$/,
             /^https?:\/\/(www\.)?steamcommunity\.com\/profiles\/\d+\/?$/
         ];
         
-        // Configuration constants
         const DUPLICATE_COOLDOWN_MINUTES = 30;
         const CHART_DISPLAY_LIMITS = { day: 30, week: 12, month: 12 };
         
-        // Store profiles globally
         let allProfiles = [];
         let filteredProfiles = [];
         let charts = {};
-        let firebaseDb = null;
-        let firebaseInitialized = false;
-        let isSyncingToFirebase = false; // Flag to prevent recursive syncing
+        let isOnline = false;
         
-        // Generate sample profiles for this week and today
-        function generateSampleProfiles() {
-            const now = Date.now();
-            const hour = 3600000;
-            const day = 24 * hour;
-            
-            return [
-                // Today's profiles
-                {
-                    url: "https://steamcommunity.com/id/cheater_caught_today1",
-                    name: "AimBot_Andy",
-                    banType: "Game",
-                    timestamp: now - (2 * hour)
-                },
-                {
-                    url: "https://steamcommunity.com/profiles/76561198999000001",
-                    name: "WallHacker_Pro",
-                    banType: "Game",
-                    timestamp: now - (5 * hour)
-                },
-                {
-                    url: "https://steamcommunity.com/id/spinbot_master",
-                    name: "SpinBot_Steve",
-                    banType: "Game",
-                    timestamp: now - (8 * hour)
-                },
-                // This week's profiles (but not today)
-                {
-                    url: "https://steamcommunity.com/id/rage_hacker_2024",
-                    name: "RageQuit_Ron",
-                    banType: "Game",
-                    timestamp: now - (1 * day + 3 * hour)
-                },
-                {
-                    url: "https://steamcommunity.com/profiles/76561198999000002",
-                    name: "TriggerBot_Tim",
-                    banType: "Game",
-                    timestamp: now - (2 * day + 6 * hour)
-                },
-                {
-                    url: "https://steamcommunity.com/id/boosting_service",
-                    name: "BoostKing_Bob",
-                    banType: "Game",
-                    timestamp: now - (2 * day + 12 * hour)
-                },
-                {
-                    url: "https://steamcommunity.com/id/legit_cheater_lol",
-                    name: "NotCheating_Nick",
-                    banType: "Game",
-                    timestamp: now - (3 * day + 2 * hour)
-                },
-                {
-                    url: "https://steamcommunity.com/profiles/76561198999000003",
-                    name: "HVH_Hero",
-                    banType: "Game",
-                    timestamp: now - (4 * day + 8 * hour)
-                },
-                {
-                    url: "https://steamcommunity.com/id/silent_aim_user",
-                    name: "SilentAim_Sam",
-                    banType: "Game",
-                    timestamp: now - (5 * day + 4 * hour)
-                },
-                {
-                    url: "https://steamcommunity.com/id/skin_scammer_99",
-                    name: "ScammerKing",
-                    banType: "Game",
-                    timestamp: now - (6 * day + 10 * hour)
-                },
-                // Older profiles for variety
-                {
-                    url: "https://steamcommunity.com/id/old_cheater_1",
-                    name: "VeteranHacker",
-                    banType: "Game",
-                    timestamp: now - (10 * day)
-                },
-                {
-                    url: "https://steamcommunity.com/profiles/76561198999000004",
-                    name: "GlobalBanned",
-                    banType: "Game",
-                    timestamp: now - (15 * day)
-                },
-                {
-                    url: "https://steamcommunity.com/id/casual_cheater",
-                    name: "CasualCheats",
-                    banType: "Game",
-                    timestamp: now - (20 * day)
-                },
-                {
-                    url: "https://steamcommunity.com/id/trade_banned_user",
-                    name: "TradeBanTom",
-                    banType: "Game",
-                    timestamp: now - (25 * day)
-                },
-                {
-                    url: "https://steamcommunity.com/profiles/76561198999000005",
-                    name: "OGCheater",
-                    banType: "Game",
-                    timestamp: now - (30 * day)
+        function updateSyncStatus(online, message = null) {
+            const statusEl = document.getElementById('syncStatus');
+            isOnline = online;
+            if (statusEl) {
+                if (online) {
+                    statusEl.className = 'sync-status online';
+                    statusEl.innerHTML = '<span class="dot"></span>' + (message || 'Synced');
+                } else {
+                    statusEl.className = 'sync-status offline';
+                    statusEl.innerHTML = '<span class="dot"></span>' + (message || 'Offline');
                 }
-            ];
-        }
-        
-        // Load profiles from localStorage
-        function loadFromStorage() {
-            try {
-                const stored = localStorage.getItem(STORAGE_KEY);
-                if (stored) {
-                    return JSON.parse(stored);
-                }
-            } catch (e) {
-                console.error('Error loading from storage:', e);
-            }
-            return null;
-        }
-        
-        // Save profiles to localStorage
-        function saveToStorage(profiles) {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
-            } catch (e) {
-                console.error('Error saving to storage:', e);
             }
         }
         
-        // Initialize Firebase for real-time synchronization
-        function initializeFirebase() {
+        async function fetchFromJsonBin() {
             try {
-                // Check if Firebase is loaded
-                if (typeof firebase === 'undefined') {
-                    console.warn('Firebase SDK not loaded. Real-time sync disabled.');
-                    return false;
-                }
-                
-                // Check if config has placeholder values
-                if (FIREBASE_CONFIG.apiKey === 'your-api-key-here' || 
-                    FIREBASE_CONFIG.databaseURL.includes('your-project-id')) {
-                    console.info('Firebase not configured. Using local storage only. To enable real-time sync across all users, configure Firebase in the FIREBASE_CONFIG object.');
-                    return false;
-                }
-                
-                // Initialize Firebase app
-                firebase.initializeApp(FIREBASE_CONFIG);
-                firebaseDb = firebase.database();
-                firebaseInitialized = true;
-                console.log('Firebase initialized successfully. Real-time sync enabled.');
-                updateSyncStatus(true);
+                updateSyncStatus(false, 'Loading...');
+                const response = await fetch(JSONBIN_URL + '/latest', {
+                    method: 'GET',
+                    headers: { 'X-Master-Key': JSONBIN_API_KEY, 'X-Bin-Meta': 'false' }
+                });
+                if (!response.ok) throw new Error('Failed to fetch: ' + response.status);
+                const data = await response.json();
+                updateSyncStatus(true, 'Synced');
+                return data.profiles || [];
+            } catch (error) {
+                console.error('Error fetching:', error);
+                updateSyncStatus(false, 'Error');
+                return null;
+            }
+        }
+        
+        async function saveToJsonBin(profiles) {
+            try {
+                updateSyncStatus(false, 'Saving...');
+                const response = await fetch(JSONBIN_URL, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY },
+                    body: JSON.stringify({ profiles: profiles })
+                });
+                if (!response.ok) throw new Error('Failed to save: ' + response.status);
+                updateSyncStatus(true, 'Synced');
                 return true;
-            } catch (e) {
-                console.error('Error initializing Firebase:', e);
+            } catch (error) {
+                console.error('Error saving:', error);
+                updateSyncStatus(false, 'Save Failed');
                 return false;
             }
         }
         
-        // Update sync status indicator
-        function updateSyncStatus(isOnline) {
-            const statusEl = document.getElementById('syncStatus');
-            if (statusEl) {
-                if (isOnline) {
-                    statusEl.className = 'sync-status online';
-                    statusEl.innerHTML = '<span class="dot"></span>Real-time Sync';
-                } else {
-                    statusEl.className = 'sync-status offline';
-                    statusEl.innerHTML = '<span class="dot"></span>Local Only';
-                }
-            }
-        }
-        
-        // Set up real-time listener for profile changes
-        function setupRealtimeListener() {
-            if (!firebaseInitialized || !firebaseDb) {
-                return;
-            }
-            
-            const profilesRef = firebaseDb.ref('profiles');
-            
-            // First, do an initial fetch to get existing Firebase data
-            // This prevents the race condition where local data overwrites Firebase data
-            return new Promise((resolve) => {
-                profilesRef.once('value', (snapshot) => {
-                    const data = snapshot.val();
-                    if (data) {
-                        // Firebase has data - use it as the source of truth
-                        const firebaseProfiles = Object.keys(data).map(key => ({
-                            firebaseKey: key,
-                            ...data[key]
-                        }));
-                        
-                        allProfiles = firebaseProfiles.map(p => ({
-                            url: p.url,
-                            name: p.name || extractNameFromUrl(p.url),
-                            banType: p.banType || 'Game',
-                            timestamp: p.timestamp || Date.now(),
-                            firebaseKey: p.firebaseKey
-                        }));
-                        saveToStorage(allProfiles);
-                        updateUI();
-                        console.log('Loaded ' + allProfiles.length + ' profiles from Firebase');
-                    } else {
-                        // No data in Firebase, upload current local data
-                        if (allProfiles.length > 0) {
-                            syncLocalToFirebase();
-                        }
-                    }
-                    
-                    // Now set up the continuous real-time listener for future updates
-                    profilesRef.on('value', (snapshot) => {
-                        const data = snapshot.val();
-                        if (data) {
-                            // Convert object to array and handle Firebase data structure
-                            const firebaseProfiles = Object.keys(data).map(key => ({
-                                firebaseKey: key,
-                                ...data[key]
-                            }));
-                            
-                            // Only update if there are actual changes (avoid unnecessary re-renders)
-                            const hasChanges = firebaseProfiles.length !== allProfiles.length ||
-                                JSON.stringify(firebaseProfiles.map(p => p.url + p.timestamp).sort()) !== 
-                                JSON.stringify(allProfiles.map(p => p.url + p.timestamp).sort());
-                            
-                            if (hasChanges) {
-                                console.log('Real-time update received from Firebase');
-                                allProfiles = firebaseProfiles.map(p => ({
-                                    url: p.url,
-                                    name: p.name || extractNameFromUrl(p.url),
-                                    banType: p.banType || 'Game',
-                                    timestamp: p.timestamp || Date.now(),
-                                    firebaseKey: p.firebaseKey
-                                }));
-                                saveToStorage(allProfiles);
-                                updateUI();
-                            }
-                        }
-                    }, (error) => {
-                        console.error('Firebase real-time listener error:', error);
-                    });
-                    
-                    resolve();
-                }, (error) => {
-                    console.error('Firebase initial fetch error:', error);
-                    resolve(); // Resolve anyway to continue with local data
-                });
-            });
-        }
-        
-        // Sync local profiles to Firebase
-        async function syncLocalToFirebase() {
-            if (!firebaseInitialized || !firebaseDb || isSyncingToFirebase) {
-                return;
-            }
-            
-            isSyncingToFirebase = true; // Prevent recursive calls from real-time listener
-            
-            try {
-                const profilesRef = firebaseDb.ref('profiles');
-                const profilesToSync = allProfiles.filter(p => !p.firebaseKey);
-                
-                if (profilesToSync.length === 0) {
-                    return;
-                }
-                
-                // Use Promise.all for proper async handling
-                // Store results separately to avoid mutating during async operations
-                const syncPromises = profilesToSync.map((profile, index) => {
-                    const newRef = profilesRef.push();
-                    return newRef.set({
-                        url: profile.url,
-                        name: profile.name,
-                        banType: profile.banType,
-                        timestamp: profile.timestamp
-                    }).then(() => {
-                        return { index, key: newRef.key };
-                    }).catch(err => {
-                        console.error('Error syncing profile to Firebase:', err);
-                        return { index, key: null };
-                    });
-                });
-                
-                const results = await Promise.all(syncPromises);
-                
-                // Assign Firebase keys after all promises resolve
-                results.forEach(result => {
-                    if (result.key) {
-                        profilesToSync[result.index].firebaseKey = result.key;
-                    }
-                });
-                
-                // Save updated profiles with Firebase keys
-                saveToStorage(allProfiles);
-            } finally {
-                isSyncingToFirebase = false;
-            }
-        }
-        
-        // Add profile to Firebase
-        function addProfileToFirebase(profile) {
-            if (!firebaseInitialized || !firebaseDb) {
-                return Promise.resolve(null);
-            }
-            
-            const profilesRef = firebaseDb.ref('profiles');
-            const newRef = profilesRef.push();
-            return newRef.set({
-                url: profile.url,
-                name: profile.name,
-                banType: profile.banType,
-                timestamp: profile.timestamp
-            }).then(() => newRef.key);
-        }
-        
-        // Remove profile from Firebase
-        function removeProfileFromFirebase(profile) {
-            if (!firebaseInitialized || !firebaseDb) {
-                return Promise.resolve();
-            }
-            
-            // If we have the Firebase key, use it directly
-            if (profile.firebaseKey) {
-                return firebaseDb.ref(`profiles/${profile.firebaseKey}`).remove();
-            }
-            
-            // Otherwise, find by URL and timestamp
-            const profilesRef = firebaseDb.ref('profiles');
-            return profilesRef.orderByChild('url').equalTo(profile.url).once('value')
-                .then(snapshot => {
-                    const data = snapshot.val();
-                    if (data) {
-                        const keys = Object.keys(data);
-                        const keyToRemove = keys.find(key => 
-                            data[key].timestamp === profile.timestamp
-                        );
-                        if (keyToRemove) {
-                            return firebaseDb.ref(`profiles/${keyToRemove}`).remove();
-                        }
-                    }
-                });
-        }
-        
-        // Fetch profiles from the repository JSON file
-        async function fetchProfiles() {
-            try {
-                const cacheBuster = new Date().getTime();
-                const response = await fetch(`${DATA_FILE_PATH}?t=${cacheBuster}`);
-                if (!response.ok) {
-                    throw new Error('Failed to load profiles');
-                }
-                const data = await response.json();
-                return data.profiles || [];
-            } catch (error) {
-                console.error('Error fetching profiles:', error);
-                return [];
-            }
-        }
-        
-        // Merge profiles (avoiding duplicates by URL)
-        function mergeProfiles(baseProfiles, newProfiles) {
-            const urlMap = new Map();
-            baseProfiles.forEach(p => urlMap.set(p.url.toLowerCase(), p));
-            newProfiles.forEach(p => {
-                const key = p.url.toLowerCase();
-                if (!urlMap.has(key)) {
-                    urlMap.set(key, p);
-                }
-            });
-            return Array.from(urlMap.values());
-        }
-        
-        // Initialize profiles
         async function initializeProfiles() {
-            // Load from localStorage first
-            let storedProfiles = loadFromStorage();
-            
-            // Fetch from JSON file
-            const fileProfiles = await fetchProfiles();
-            
-            // Generate sample profiles
-            const sampleProfiles = generateSampleProfiles();
-            
-            // If no stored profiles, initialize with samples and file data
-            if (!storedProfiles || storedProfiles.length === 0) {
-                // Merge file profiles and sample profiles
-                allProfiles = mergeProfiles(fileProfiles, sampleProfiles);
+            const jsonBinProfiles = await fetchFromJsonBin();
+            if (jsonBinProfiles !== null) {
+                allProfiles = jsonBinProfiles.map(p => ({
+                    url: p.url,
+                    name: p.name || extractNameFromUrl(p.url),
+                    banType: p.banType || 'Game',
+                    timestamp: p.timestamp || Date.now()
+                }));
             } else {
-                // Merge stored with file profiles (file profiles take precedence for existing URLs)
-                allProfiles = mergeProfiles(storedProfiles, sampleProfiles);
+                allProfiles = [];
             }
-            
-            // Ensure all profiles have required fields
-            allProfiles = allProfiles.map(p => ({
-                url: p.url,
-                name: p.name || extractNameFromUrl(p.url),
-                banType: 'Game',
-                timestamp: p.timestamp || Date.now()
-            }));
-            
-            // Save to localStorage
-            saveToStorage(allProfiles);
-            
             return allProfiles;
         }
         
-        // Extract name from Steam URL
+        async function refreshData() {
+            const profiles = await fetchFromJsonBin();
+            if (profiles !== null) {
+                allProfiles = profiles.map(p => ({
+                    url: p.url,
+                    name: p.name || extractNameFromUrl(p.url),
+                    banType: p.banType || 'Game',
+                    timestamp: p.timestamp || Date.now()
+                }));
+                updateUI();
+                showSuccess('Data refreshed successfully!');
+            } else {
+                showError('Failed to refresh data. Please try again.');
+            }
+        }
+        
         function extractNameFromUrl(url) {
             const match = url.match(/\/id\/([^\/]+)\/?$/) || url.match(/\/profiles\/(\d+)\/?$/);
             return match ? match[1] : 'Unknown';
         }
         
-        // Validate Steam profile URL
         function isValidSteamUrl(url) {
             return STEAM_URL_PATTERNS.some(pattern => pattern.test(url));
         }
         
-        // Date helper functions
         function getStartOfToday() {
             const now = new Date();
             return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -1003,9 +268,7 @@
         
         function getStartOfWeek() {
             const now = new Date();
-            const dayOfWeek = now.getDay();
-            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
-            return start.getTime();
+            return new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()).getTime();
         }
         
         function getStartOfMonth() {
@@ -1013,238 +276,140 @@
             return new Date(now.getFullYear(), now.getMonth(), 1).getTime();
         }
         
-        function getStartOfYear() {
-            const now = new Date();
-            return new Date(now.getFullYear(), 0, 1).getTime();
-        }
-        
-        // Calculate counts
         function calculateCounts(profiles) {
             const startOfToday = getStartOfToday();
             const startOfWeek = getStartOfWeek();
             const startOfMonth = getStartOfMonth();
-            
-            let todayCount = 0;
-            let weekCount = 0;
-            let monthCount = 0;
-            
+            let todayCount = 0, weekCount = 0, monthCount = 0;
             profiles.forEach(profile => {
                 const timestamp = profile.timestamp;
                 if (timestamp >= startOfToday) todayCount++;
                 if (timestamp >= startOfWeek) weekCount++;
                 if (timestamp >= startOfMonth) monthCount++;
             });
-            
-            return {
-                today: todayCount,
-                week: weekCount,
-                month: monthCount,
-                total: profiles.length
-            };
+            return { today: todayCount, week: weekCount, month: monthCount, total: profiles.length };
         }
         
-        // Apply filters to profiles
         function applyFilters() {
             const startDate = document.getElementById('filterStartDate').value;
             const endDate = document.getElementById('filterEndDate').value;
-            
             filteredProfiles = allProfiles.filter(profile => {
-                // Date filter
-                if (startDate) {
-                    const start = new Date(startDate).getTime();
-                    if (profile.timestamp < start) return false;
-                }
-                if (endDate) {
-                    const end = new Date(endDate).getTime() + 86400000; // End of day
-                    if (profile.timestamp > end) return false;
-                }
-                
+                if (startDate && profile.timestamp < new Date(startDate).getTime()) return false;
+                if (endDate && profile.timestamp > new Date(endDate).getTime() + 86400000) return false;
                 return true;
             });
-            
             updateStatsSummary();
             updateCharts();
             updateProfileList();
         }
         
-        // Reset filters
         function resetFilters() {
             document.getElementById('filterStartDate').value = '';
             document.getElementById('filterEndDate').value = '';
             document.getElementById('quickFilter').value = '';
             document.getElementById('chartInterval').value = 'day';
-            
-            // Remove active state from stat cards
             document.querySelectorAll('.stat-card').forEach(card => card.classList.remove('active'));
-            
             filteredProfiles = [...allProfiles];
             updateStatsSummary();
             updateCharts();
             updateProfileList();
         }
         
-        // Quick filter
         function applyQuickFilter(filter) {
             resetFilters();
-            
             const now = new Date();
-            let startDate, endDate;
-            
+            let startDate;
             switch (filter) {
-                case 'today':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    break;
-                case 'week':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
-                    break;
-                case 'month':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                    break;
-                case 'year':
-                    startDate = new Date(now.getFullYear(), 0, 1);
-                    break;
-                case 'all':
-                default:
-                    filteredProfiles = [...allProfiles];
-                    updateStatsSummary();
-                    updateCharts();
-                    updateProfileList();
-                    return;
+                case 'today': startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()); break;
+                case 'week': startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()); break;
+                case 'month': startDate = new Date(now.getFullYear(), now.getMonth(), 1); break;
+                case 'year': startDate = new Date(now.getFullYear(), 0, 1); break;
+                default: filteredProfiles = [...allProfiles]; updateStatsSummary(); updateCharts(); updateProfileList(); return;
             }
-            
             if (startDate) {
                 document.getElementById('filterStartDate').value = startDate.toISOString().split('T')[0];
                 applyFilters();
             }
         }
         
-        // Update stats summary
         function updateStatsSummary() {
-            const count = filteredProfiles.length;
-            
-            document.getElementById('filteredCount').textContent = count;
+            document.getElementById('filteredCount').textContent = filteredProfiles.length;
         }
         
-        // Escape HTML to prevent XSS
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
         
-        // Update profile list
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+            setTimeout(() => { errorEl.style.display = 'none'; }, 5000);
+        }
+        
+        function showSuccess(message) {
+            const successEl = document.getElementById('successMessage');
+            successEl.textContent = message;
+            successEl.style.display = 'block';
+            setTimeout(() => { successEl.style.display = 'none'; }, 3000);
+        }
+        
         function updateProfileList() {
             const profileList = document.getElementById('profileList');
             const sortBy = document.getElementById('sortBy').value;
-            
             let sorted = [...filteredProfiles];
-            
             switch (sortBy) {
-                case 'date-desc':
-                    sorted.sort((a, b) => b.timestamp - a.timestamp);
-                    break;
-                case 'date-asc':
-                    sorted.sort((a, b) => a.timestamp - b.timestamp);
-                    break;
-                case 'name-asc':
-                    sorted.sort((a, b) => a.name.localeCompare(b.name));
-                    break;
-                case 'name-desc':
-                    sorted.sort((a, b) => b.name.localeCompare(a.name));
-                    break;
+                case 'date-desc': sorted.sort((a, b) => b.timestamp - a.timestamp); break;
+                case 'date-asc': sorted.sort((a, b) => a.timestamp - b.timestamp); break;
+                case 'name-asc': sorted.sort((a, b) => a.name.localeCompare(b.name)); break;
+                case 'name-desc': sorted.sort((a, b) => b.name.localeCompare(a.name)); break;
             }
-            
-            // Limit to last 10 bans
             const displayLimit = 10;
             const displayProfiles = sorted.slice(0, displayLimit);
-            
             document.getElementById('resultsCount').textContent = `Showing ${displayProfiles.length} of ${sorted.length} bans`;
-            
             if (displayProfiles.length === 0) {
-                profileList.innerHTML = '<li class="empty-message">No bans match your filters.</li>';
+                profileList.innerHTML = '<li class="empty-message">No bans found. Add your first ban above!</li>';
                 return;
             }
-            
-            profileList.innerHTML = displayProfiles.map((profile, index) => {
+            profileList.innerHTML = displayProfiles.map((profile) => {
                 const date = new Date(profile.timestamp);
                 const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const safeTimestamp = Number(profile.timestamp);
-                
-                return `
-                    <li class="profile-item">
-                        <div>
-                            <span class="profile-name">${escapeHtml(profile.name)}</span>
-                            <br>
-                            <a href="${escapeHtml(profile.url)}" target="_blank" rel="noopener noreferrer" class="profile-link">${escapeHtml(profile.url)}</a>
-                        </div>
-                        <span class="badge badge-game">Game Ban</span>
-                        <span class="profile-date">📅 ${escapeHtml(dateStr)}</span>
-                        <button class="profile-delete" data-url="${escapeHtml(profile.url)}" data-timestamp="${safeTimestamp}" title="Delete">🗑️</button>
-                    </li>
-                `;
+                return `<li class="profile-item">
+                    <div><span class="profile-name">${escapeHtml(profile.name)}</span><br>
+                    <a href="${escapeHtml(profile.url)}" target="_blank" rel="noopener noreferrer" class="profile-link">${escapeHtml(profile.url)}</a></div>
+                    <span class="badge badge-game">Game Ban</span>
+                    <span class="profile-date">📅 ${escapeHtml(dateStr)}</span>
+                    <button class="profile-delete" data-url="${escapeHtml(profile.url)}" data-timestamp="${Number(profile.timestamp)}" title="Delete">🗑️</button>
+                </li>`;
             }).join('');
-            
-            // Add event delegation for delete buttons
-            profileList.addEventListener('click', handleDeleteClick);
         }
         
-        // Handle delete button clicks using event delegation
-        function handleDeleteClick(event) {
+        async function handleDeleteClick(event) {
             if (event.target.classList.contains('profile-delete')) {
                 const url = event.target.dataset.url;
                 const timestamp = parseInt(event.target.dataset.timestamp);
-                if (url) {
-                    // Find the profile to get Firebase key
-                    const profileToRemove = allProfiles.find(p => p.url === url && p.timestamp === timestamp);
-                    
-                    // Helper function to remove locally
-                    const removeLocally = () => {
-                        allProfiles = allProfiles.filter(p => !(p.url === url && p.timestamp === timestamp));
-                        saveToStorage(allProfiles);
+                if (url && confirm('Are you sure you want to delete this entry?')) {
+                    allProfiles = allProfiles.filter(p => !(p.url === url && p.timestamp === timestamp));
+                    const saved = await saveToJsonBin(allProfiles);
+                    if (saved) {
                         filteredProfiles = filteredProfiles.filter(p => !(p.url === url && p.timestamp === timestamp));
                         updateUI();
-                    };
-                    
-                    // If Firebase is enabled, remove from Firebase and let real-time listener update UI
-                    if (firebaseInitialized && profileToRemove) {
-                        removeProfileFromFirebase(profileToRemove)
-                            .catch(err => {
-                                console.error('Error removing from Firebase:', err);
-                                // On Firebase error, remove locally as fallback
-                                removeLocally();
-                            });
-                        // Note: Real-time listener will automatically update allProfiles and UI
-                        // when Firebase data changes, so no need for removeLocally() on success
+                        showSuccess('Entry deleted successfully!');
                     } else {
-                        // Firebase not enabled, just remove locally
-                        removeLocally();
+                        showError('Failed to delete. Please try again.');
+                        await refreshData();
                     }
                 }
             }
         }
         
-        // Update charts
         function updateCharts() {
-            // Check if Chart.js is available
-            if (typeof Chart === 'undefined') {
-                console.warn('Chart.js not available. Charts will not be displayed.');
-                document.querySelectorAll('.chart-box').forEach(box => {
-                    const canvas = box.querySelector('canvas');
-                    if (canvas && !box.querySelector('.chart-fallback')) {
-                        const fallback = document.createElement('div');
-                        fallback.className = 'chart-fallback';
-                        fallback.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;color:#7a8b9a;text-align:center;';
-                        fallback.innerHTML = 'Charts will be visible when deployed to GitHub Pages';
-                        canvas.style.display = 'none';
-                        box.appendChild(fallback);
-                    }
-                });
-                return;
-            }
+            if (typeof Chart === 'undefined') return;
             updateTimelineChart();
         }
         
-        // Get week number helper
         function getWeekNumber(date) {
             const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
             const dayNum = d.getUTCDay() || 7;
@@ -1253,224 +418,90 @@
             return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
         }
         
-        // Timeline chart with configurable interval
         function updateTimelineChart() {
             const ctx = document.getElementById('timelineChart').getContext('2d');
             const interval = document.getElementById('chartInterval').value;
-            
-            // Group by interval
             const groups = {};
             filteredProfiles.forEach(p => {
                 const date = new Date(p.timestamp);
                 let key;
-                
                 switch (interval) {
-                    case 'week':
-                        const weekNum = getWeekNumber(date);
-                        key = `${date.getFullYear()}-W${weekNum.toString().padStart(2, '0')}`;
-                        break;
-                    case 'month':
-                        key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-                        break;
-                    case 'day':
-                    default:
-                        key = date.toLocaleDateString();
-                        break;
+                    case 'week': key = `${date.getFullYear()}-W${getWeekNumber(date).toString().padStart(2, '0')}`; break;
+                    case 'month': key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`; break;
+                    default: key = date.toLocaleDateString(); break;
                 }
-                
                 groups[key] = (groups[key] || 0) + 1;
             });
-            
-            // Sort and limit data
-            let sortedKeys;
-            if (interval === 'day') {
-                sortedKeys = Object.keys(groups).sort((a, b) => new Date(a) - new Date(b));
-            } else {
-                sortedKeys = Object.keys(groups).sort();
-            }
-            
-            // Limit to last N entries based on interval
-            const limit = CHART_DISPLAY_LIMITS[interval] || 30;
-            const displayKeys = sortedKeys.slice(-limit);
-            
-            if (charts.timeline) {
-                charts.timeline.destroy();
-            }
-            
+            let sortedKeys = interval === 'day' ? Object.keys(groups).sort((a, b) => new Date(a) - new Date(b)) : Object.keys(groups).sort();
+            const displayKeys = sortedKeys.slice(-(CHART_DISPLAY_LIMITS[interval] || 30));
+            if (charts.timeline) charts.timeline.destroy();
             charts.timeline = new Chart(ctx, {
                 type: 'bar',
-                data: {
-                    labels: displayKeys,
-                    datasets: [{
-                        label: 'Game Bans',
-                        data: displayKeys.map(d => groups[d]),
-                        backgroundColor: '#ffa500',
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { 
-                                color: '#7a8b9a',
-                                stepSize: 1
-                            },
-                            grid: { color: '#2a475e' }
-                        },
-                        x: {
-                            ticks: { color: '#7a8b9a', maxRotation: 45 },
-                            grid: { display: false }
-                        }
-                    }
+                data: { labels: displayKeys, datasets: [{ label: 'Game Bans', data: displayKeys.map(d => groups[d]), backgroundColor: '#ffa500', borderRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { color: '#7a8b9a', stepSize: 1 }, grid: { color: '#2a475e' } }, x: { ticks: { color: '#7a8b9a', maxRotation: 45 }, grid: { display: false } } }
                 }
             });
         }
         
-        // Update the main UI
         function updateUI() {
             const counts = calculateCounts(allProfiles);
-            
             document.getElementById('todayCount').textContent = counts.today;
             document.getElementById('weekCount').textContent = counts.week;
             document.getElementById('monthCount').textContent = counts.month;
             document.getElementById('totalCount').textContent = counts.total;
-            
             filteredProfiles = [...allProfiles];
             updateStatsSummary();
             updateCharts();
             updateProfileList();
         }
         
-        // Add new profile
-        function addProfile() {
+        async function addProfile() {
             const urlInput = document.getElementById('profileInput');
-            const errorMessage = document.getElementById('errorMessage');
-            const successMessage = document.getElementById('successMessage');
-            
             const url = urlInput.value.trim();
-            const name = extractNameFromUrl(url);
-            
-            // Clear messages
-            errorMessage.style.display = 'none';
-            successMessage.style.display = 'none';
-            
-            if (!url) {
-                errorMessage.textContent = 'Please enter a Steam profile URL.';
-                errorMessage.style.display = 'block';
-                return;
-            }
-            
-            if (!isValidSteamUrl(url)) {
-                errorMessage.textContent = 'Please enter a valid Steam profile URL.';
-                errorMessage.style.display = 'block';
-                return;
-            }
-            
-            // Check for duplicates within cooldown period
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+            if (!url) { showError('Please enter a Steam profile URL.'); return; }
+            if (!isValidSteamUrl(url)) { showError('Please enter a valid Steam profile URL.'); return; }
             const cooldownMs = DUPLICATE_COOLDOWN_MINUTES * 60 * 1000;
-            const cooldownThreshold = Date.now() - cooldownMs;
-            const recentDuplicate = allProfiles.find(p => 
-                p.url.toLowerCase() === url.toLowerCase() && 
-                p.timestamp > cooldownThreshold
-            );
-            
+            const recentDuplicate = allProfiles.find(p => p.url.toLowerCase() === url.toLowerCase() && p.timestamp > Date.now() - cooldownMs);
             if (recentDuplicate) {
                 const timeSinceLastAdd = Math.ceil((Date.now() - recentDuplicate.timestamp) / 60000);
-                const waitTime = DUPLICATE_COOLDOWN_MINUTES - timeSinceLastAdd;
-                errorMessage.textContent = `This profile was added ${timeSinceLastAdd} minute(s) ago. Please wait ${waitTime} more minute(s) before adding again.`;
-                errorMessage.style.display = 'block';
+                showError(`This profile was added ${timeSinceLastAdd} minute(s) ago. Please wait ${DUPLICATE_COOLDOWN_MINUTES - timeSinceLastAdd} more minute(s).`);
                 return;
             }
-            
-            // Add profile
-            const newProfile = {
-                url: url,
-                name: name,
-                banType: 'Game',
-                timestamp: Date.now()
-            };
-            
-            // Helper function to add locally and update UI
-            const addLocally = (firebaseKey = null) => {
-                if (firebaseKey) {
-                    newProfile.firebaseKey = firebaseKey;
-                }
-                allProfiles.unshift(newProfile);
-                saveToStorage(allProfiles);
+            const name = extractNameFromUrl(url);
+            const newProfile = { url: url, name: name, banType: 'Game', timestamp: Date.now() };
+            allProfiles.unshift(newProfile);
+            const saved = await saveToJsonBin(allProfiles);
+            if (saved) {
+                urlInput.value = '';
                 updateUI();
-            };
-            
-            // Clear input
-            urlInput.value = '';
-            
-            // If Firebase is enabled, add to Firebase and let real-time listener update UI
-            if (firebaseInitialized) {
-                addProfileToFirebase(newProfile)
-                    .then(() => {
-                        // Show success - real-time listener will update the UI
-                        successMessage.textContent = `Game ban for "${name}" added successfully!`;
-                        successMessage.style.display = 'block';
-                    })
-                    .catch(err => {
-                        console.error('Error adding to Firebase:', err);
-                        // On Firebase error, add locally as fallback
-                        addLocally();
-                        successMessage.textContent = `Game ban for "${name}" added locally (sync failed).`;
-                        successMessage.style.display = 'block';
-                    });
-                // Note: Real-time listener will automatically update allProfiles and UI
-                // when Firebase data changes, so no need for addLocally() on success
+                showSuccess(`Game ban for "${name}" added and synced!`);
             } else {
-                // Firebase not enabled, just add locally
-                addLocally();
-                // Show success
-                successMessage.textContent = `Game ban for "${name}" added successfully!`;
-                successMessage.style.display = 'block';
+                allProfiles.shift();
+                showError('Failed to save. Please try again.');
             }
-            
-            // Hide success message after 3 seconds
-            setTimeout(() => {
-                successMessage.style.display = 'none';
-            }, 3000);
         }
         
-        // Escape CSV cell value properly
         function escapeCsvCell(value) {
             const str = String(value);
-            // If the value contains quotes, commas, or newlines, escape it
-            if (str.includes('"') || str.includes(',') || str.includes('\n') || str.includes('\r')) {
-                return '"' + str.replace(/"/g, '""') + '"';
-            }
+            if (str.includes('"') || str.includes(',') || str.includes('\n') || str.includes('\r')) return '"' + str.replace(/"/g, '""') + '"';
             return '"' + str + '"';
         }
         
-        // Export to CSV
         function exportCSV() {
             const headers = ['Name', 'URL', 'Ban Type', 'Date'];
-            const rows = filteredProfiles.map(p => [
-                p.name,
-                p.url,
-                p.banType,
-                new Date(p.timestamp).toISOString()
-            ]);
-            
+            const rows = filteredProfiles.map(p => [p.name, p.url, p.banType, new Date(p.timestamp).toISOString()]);
             const csv = [headers, ...rows].map(row => row.map(cell => escapeCsvCell(cell)).join(',')).join('\n');
             downloadFile(csv, 'cs2_game_bans.csv', 'text/csv');
         }
         
-        // Export to JSON
         function exportJSON() {
             const json = JSON.stringify({ profiles: filteredProfiles }, null, 2);
             downloadFile(json, 'cs2_game_bans.json', 'application/json');
         }
         
-        // Download file helper
         function downloadFile(content, filename, type) {
             const blob = new Blob([content], { type });
             const url = URL.createObjectURL(blob);
@@ -1481,29 +512,17 @@
             URL.revokeObjectURL(url);
         }
         
-        // Event listeners
         document.getElementById('addButton').addEventListener('click', addProfile);
-        document.getElementById('profileInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') addProfile();
-        });
-        
+        document.getElementById('profileInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') addProfile(); });
+        document.getElementById('refreshButton').addEventListener('click', refreshData);
         document.getElementById('applyFilters').addEventListener('click', applyFilters);
         document.getElementById('resetFilters').addEventListener('click', resetFilters);
-        
-        document.getElementById('quickFilter').addEventListener('change', (e) => {
-            if (e.target.value) {
-                applyQuickFilter(e.target.value);
-            }
-        });
-        
+        document.getElementById('quickFilter').addEventListener('change', (e) => { if (e.target.value) applyQuickFilter(e.target.value); });
         document.getElementById('chartInterval').addEventListener('change', updateCharts);
-        
         document.getElementById('sortBy').addEventListener('change', updateProfileList);
-        
         document.getElementById('exportCSV').addEventListener('click', exportCSV);
         document.getElementById('exportJSON').addEventListener('click', exportJSON);
-        
-        // Stat card click handlers
+        document.getElementById('profileList').addEventListener('click', handleDeleteClick);
         document.querySelectorAll('.stat-card').forEach(card => {
             card.addEventListener('click', () => {
                 const filter = card.dataset.filter;
@@ -1514,19 +533,9 @@
             });
         });
         
-        // Initialize
         async function init() {
-            // Initialize Firebase for real-time sync
-            const firebaseReady = initializeFirebase();
-            
             await initializeProfiles();
             updateUI();
-            
-            // Set up real-time listener after initial load
-            // This will fetch existing Firebase data and set up continuous listening
-            if (firebaseReady) {
-                await setupRealtimeListener();
-            }
         }
         
         init();
