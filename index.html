@@ -162,7 +162,7 @@
         <div class="steam-profile-section">
             <h2>🎮 Steam Profile Viewer</h2>
             <div class="steam-profile-input-section">
-                <input type="text" id="steamProfileInput" placeholder="Enter Steam profile URL or Steam API key to fetch profile data" />
+                <input type="text" id="steamProfileInput" placeholder="Enter Steam profile URL (e.g., https://steamcommunity.com/profiles/...)" />
                 <button id="fetchSteamProfile">Fetch Profile</button>
             </div>
             <div id="steamProfileDisplay">
@@ -606,9 +606,9 @@
 
             const idMatch = url.match(/steamcommunity\.com\/id\/([^\/]+)/);
             if (idMatch) {
-                // For vanity URLs, we'd need to resolve them via API
-                // For now, return the vanity name
-                return idMatch[1];
+                // For vanity URLs, return the vanity name as identifier
+                // Note: In production, this should be resolved via Steam Web API ResolveVanityURL
+                return 'id/' + idMatch[1];
             }
 
             throw new Error('Invalid Steam profile URL');
