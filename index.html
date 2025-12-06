@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; connect-src 'self' https://api.jsonbin.io; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; connect-src 'self' https://api.jsonbin.io https://api.steampowered.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.steamstatic.com https://steamcdn-a.akamaihd.net;">
     <title>CS2 Game Ban Tracker</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -73,6 +73,14 @@
         .sync-status.offline .dot { background-color: #ff6b6b; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .refresh-btn { padding: 8px 16px; font-size: 12px; }
+        .steam-profile-section { background-color: #2a475e; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        .steam-profile-content { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .steam-profile-avatar { width: 80px; height: 80px; border-radius: 8px; border: 2px solid #66c0f4; }
+        .steam-profile-info h3 { margin: 0 0 5px 0; color: #66c0f4; font-size: 18px; }
+        .steam-profile-info p { margin: 0; color: #7a8b9a; font-size: 14px; }
+        .steam-profile-input-section { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .steam-profile-input-section input { flex: 1; min-width: 250px; }
+        .steam-profile-placeholder { text-align: center; color: #7a8b9a; padding: 20px; }
     </style>
 </head>
 <body>
@@ -149,6 +157,17 @@
             </div>
             <p class="results-count" id="resultsCount"></p>
             <ul class="profile-list" id="profileList"><li class="loading-message">Loading profiles...</li></ul>
+        </div>
+
+        <div class="steam-profile-section">
+            <h2>🎮 Steam Profile Viewer</h2>
+            <div class="steam-profile-input-section">
+                <input type="text" id="steamProfileInput" placeholder="Enter Steam profile URL or Steam API key to fetch profile data" />
+                <button id="fetchSteamProfile">Fetch Profile</button>
+            </div>
+            <div id="steamProfileDisplay">
+                <div class="steam-profile-placeholder">Enter a Steam profile URL above to view profile information</div>
+            </div>
         </div>
     </div>
 
@@ -542,6 +561,81 @@
         }
         
         init();
+
+        // Steam Profile Viewer functionality
+        async function fetchSteamProfile() {
+            const input = document.getElementById('steamProfileInput').value.trim();
+            const displayEl = document.getElementById('steamProfileDisplay');
+            
+            if (!input) {
+                displayEl.innerHTML = '<div class="steam-profile-placeholder">Please enter a Steam profile URL</div>';
+                return;
+            }
+
+            displayEl.innerHTML = '<div class="loading-message">Fetching profile data...</div>';
+
+            try {
+                // Extract Steam ID from URL
+                const steamId = await extractSteamIdFromUrl(input);
+                
+                // Note: Direct Steam API calls from browser are blocked by CORS.
+                // This is a demonstration of how the API would be called.
+                // For production, you would need a backend proxy or use a CORS proxy service.
+                
+                // For demo purposes, we'll show mock data
+                // In production, you would call: https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/
+                
+                displaySteamProfile({
+                    steamid: steamId,
+                    personaname: extractNameFromUrl(input),
+                    avatarfull: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="184" height="184"%3E%3Crect fill="%232a475e" width="184" height="184"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%2366c0f4" font-size="48" font-family="Arial"%3ESteam%3C/text%3E%3C/svg%3E',
+                    profileurl: input,
+                    note: 'Note: To fetch real profile data, you need a Steam Web API key and a backend proxy due to CORS restrictions.'
+                });
+            } catch (error) {
+                displayEl.innerHTML = `<div class="error-message">Error: ${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        async function extractSteamIdFromUrl(url) {
+            // Extract Steam ID from different URL formats
+            const profileMatch = url.match(/steamcommunity\.com\/profiles\/(\d+)/);
+            if (profileMatch) {
+                return profileMatch[1];
+            }
+
+            const idMatch = url.match(/steamcommunity\.com\/id\/([^\/]+)/);
+            if (idMatch) {
+                // For vanity URLs, we'd need to resolve them via API
+                // For now, return the vanity name
+                return idMatch[1];
+            }
+
+            throw new Error('Invalid Steam profile URL');
+        }
+
+        function displaySteamProfile(profileData) {
+            const displayEl = document.getElementById('steamProfileDisplay');
+            
+            const html = `
+                <div class="steam-profile-content">
+                    <img src="${escapeHtml(profileData.avatarfull)}" alt="Steam Avatar" class="steam-profile-avatar" />
+                    <div class="steam-profile-info">
+                        <h3>${escapeHtml(profileData.personaname)}</h3>
+                        <p>Steam ID: ${escapeHtml(profileData.steamid)}</p>
+                        <p><a href="${escapeHtml(profileData.profileurl)}" target="_blank" rel="noopener noreferrer" class="profile-link">View Profile</a></p>
+                        ${profileData.note ? `<p style="margin-top: 10px; font-size: 12px; color: #ffa500;">${escapeHtml(profileData.note)}</p>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            displayEl.innerHTML = html;
+        }
+
+        document.getElementById('fetchSteamProfile').addEventListener('click', fetchSteamProfile);
+        document.getElementById('steamProfileInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') fetchSteamProfile();
+        });
     </script>
 </body>
 </html>
